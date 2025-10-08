@@ -1,0 +1,126 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement for W6W Editor
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please fill out the form below to help us understand your idea.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem? Please describe.
+      placeholder: A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see implemented.
+      placeholder: A clear and concise description of what you want to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or features?
+      placeholder: A clear and concise description of any alternative solutions or features you've considered.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Feature Area
+      description: Which area of the editor does this feature relate to?
+      options:
+        - Canvas/Workflow Editor
+        - Node Components
+        - State Management
+        - User Interface/UX
+        - Performance
+        - Accessibility
+        - Documentation
+        - Developer Experience/API
+        - Integrations
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority/Impact
+      description: How important is this feature to you or your use case?
+      options:
+        - Critical - Blocking my ability to use the editor
+        - High - Would significantly improve my workflow
+        - Medium - Would be nice to have
+        - Low - Minor improvement
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Describe your specific use case for this feature
+      placeholder: How would you use this feature in practice? What workflow would it enable?
+    validations:
+      required: true
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups or Examples
+      description: If applicable, add mockups, sketches, or examples from other tools
+      placeholder: Drag and drop images here, or link to examples
+    validations:
+      required: false
+
+  - type: textarea
+    id: technical
+    attributes:
+      label: Technical Considerations
+      description: Are there any technical constraints or implementation details worth mentioning?
+      placeholder: Any thoughts on implementation, dependencies, or technical challenges?
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the feature request here.
+      placeholder: Any other information that might be relevant
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following before submitting
+      options:
+        - label: I have searched existing issues and discussions to ensure this feature hasn't been requested before
+          required: true
+        - label: I have provided a clear description of the problem and proposed solution
+          required: true
+        - label: This feature aligns with the open-source nature of W6W Editor
+          required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Are you interested in contributing to this feature?
+      options:
+        - label: I am willing to submit a pull request for this feature
+          required: false
