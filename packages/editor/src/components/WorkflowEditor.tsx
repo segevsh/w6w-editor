@@ -1,20 +1,55 @@
-import { type FC } from 'react';
+import { type FC, useCallback, useMemo } from 'react';
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  type Connection,
+  type NodeTypes,
+  Panel,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 import type { Workflow } from '../types';
+import { RectangleNode } from './nodes/RectangleNode';
 
 export interface WorkflowEditorProps {
   initialWorkflow?: Workflow;
   onChange?: (workflow: Workflow) => void;
   className?: string;
+  /**
+   * Height of the editor canvas
+   * @default '600px'
+   */
+  height?: string;
+  /**
+   * Whether to show the minimap
+   * @default true
+   */
+  showMiniMap?: boolean;
+  /**
+   * Whether to show the controls
+   * @default true
+   */
+  showControls?: boolean;
+  /**
+   * Whether to show the background grid
+   * @default true
+   */
+  showBackground?: boolean;
 }
 
 /**
- * WorkflowEditor - Main visual workflow editor component
+ * WorkflowEditor - Main visual workflow editor component powered by React Flow
  *
  * @example
  * ```tsx
  * <WorkflowEditor
  *   initialWorkflow={{ nodes: [], edges: [] }}
  *   onChange={(workflow) => console.log(workflow)}
+ *   height="800px"
  * />
  * ```
  */
@@ -22,12 +57,64 @@ export const WorkflowEditor: FC<WorkflowEditorProps> = ({
   initialWorkflow = { nodes: [], edges: [] },
   onChange,
   className = '',
+  height = '600px',
+  showMiniMap = true,
+  showControls = true,
+  showBackground = true,
 }) => {
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialWorkflow.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialWorkflow.edges);
+
+  const onConnect = useCallback(
+    (params: Connection) => {
+      const newEdges = addEdge(params, edges);
+      setEdges(newEdges);
+      onChange?.({ nodes, edges: newEdges });
+    },
+    [edges, nodes, onChange, setEdges]
+  );
+
+  const handleNodesChange = useCallback(
+    (changes: any) => {
+      onNodesChange(changes);
+      // Notify parent of changes after state update
+      setTimeout(() => {
+        onChange?.({ nodes, edges });
+      }, 0);
+    },
+    [onNodesChange, onChange, nodes, edges]
+  );
+
+  const handleEdgesChange = useCallback(
+    (changes: any) => {
+      onEdgesChange(changes);
+      // Notify parent of changes after state update
+      setTimeout(() => {
+        onChange?.({ nodes, edges });
+      }, 0);
+    },
+    [onEdgesChange, onChange, nodes, edges]
+  );
+
   return (
-    <div className={`w6w-editor ${className}`}>
-      <h1>W6W Workflow Editor</h1>
-      <p>Visual workflow editor - Coming soon!</p>
-      <pre>{JSON.stringify(initialWorkflow, null, 2)}</pre>
+    <div className={`w6w-editor ${className}`} style={{ height, width: '100%' }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={handleNodesChange}
+        onEdgesChange={handleEdgesChange}
+        onConnect={onConnect}
+        fitView
+      >
+        {showBackground && <Background />}
+        {showControls && <Controls />}
+        {showMiniMap && <MiniMap />}
+        <Panel position="top-left">
+          <div style={{ padding: '8px', background: 'white', borderRadius: '4px', fontSize: '12px' }}>
+            <strong>W6W Workflow Editor</strong>
+          </div>
+        </Panel>
+      </ReactFlow>
     </div>
   );
 };
