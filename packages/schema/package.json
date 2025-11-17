@@ -1,7 +1,17 @@
 {
     "name": "@w6w-io/schema",
-    "version": "1.0.0.alpha-1",
+    "version": "1.0.0-alpha.1",
     "description": "JSON Schema definitions for W6W (Workflow) components and configurations",
+    "type": "module",
+    "main": "./src/index.ts",
+    "module": "./src/index.ts",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "import": "./src/index.ts"
+        }
+    },
     "scripts": {
         "generate-schemas": "tsx scripts/generate-json-schemas.ts",
         "build": "npm run generate-schemas"
