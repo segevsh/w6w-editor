@@ -1,6 +1,7 @@
-import { type FC, useCallback } from 'react';
+import { type FC, useCallback, useState } from 'react';
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   Controls,
   MiniMap,
@@ -11,8 +12,10 @@ import {
   type Node,
   type Edge,
   BackgroundVariant,
+  useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { ContextMenu, type ContextMenuItem } from './ui/ContextMenu';
 
 export interface CanvasProps {
   /**
@@ -59,20 +62,9 @@ export interface CanvasProps {
 }
 
 /**
- * Canvas - A workflow canvas component powered by React Flow
- *
- * @example
- * ```tsx
- * <Canvas
- *   initialNodes={[
- *     { id: '1', position: { x: 0, y: 0 }, data: { label: 'Node 1' } }
- *   ]}
- *   initialEdges={[]}
- *   onChange={(nodes, edges) => console.log(nodes, edges)}
- * />
- * ```
+ * Internal Canvas component that uses React Flow hooks
  */
-export const Canvas: FC<CanvasProps> = ({
+const CanvasInner: FC<CanvasProps> = ({
   initialNodes = [],
   initialEdges = [],
   onChange,
@@ -85,6 +77,96 @@ export const Canvas: FC<CanvasProps> = ({
 }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const { screenToFlowPosition } = useReactFlow();
+
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    items: ContextMenuItem[];
+  } | null>(null);
+
+  // Handle context menu on pane (canvas background)
+  const onPaneContextMenu = useCallback((event: any) => {
+    event.preventDefault();
+
+    const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      items: [
+        {
+          label: 'Add node',
+          onClick: () => {
+            const newNode: Node = {
+              id: `node-${Date.now()}`,
+              type: 'default',
+              position,
+              data: { label: 'New Node' },
+            };
+            setNodes((nds) => [...nds, newNode]);
+            onChange?.([...nodes, newNode], edges);
+          },
+        },
+        // {
+        //   label: 'Add connection',
+        //   onClick: () => {
+        //     console.log('Add connection clicked');
+        //   },
+        // },
+        // {
+        //   label: 'Add variable',
+        //   onClick: () => {
+        //     console.log('Add variable clicked');
+        //   },
+        // },
+      ],
+    });
+  }, [screenToFlowPosition, setNodes, nodes, edges, onChange]);
+
+  // Handle context menu on node
+  const onNodeContextMenu = useCallback((event: any, node: Node) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      items: [
+        {
+          label: 'Delete node',
+          destructive: true,
+          onClick: () => {
+            const newNodes = nodes.filter((n) => n.id !== node.id);
+            setNodes(newNodes);
+            onChange?.(newNodes, edges);
+          },
+        },
+      ],
+    });
+  }, [nodes, edges, setNodes, onChange]);
+
+  // Handle context menu on edge
+  const onEdgeContextMenu = useCallback((event: any, edge: Edge) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      items: [
+        {
+          label: 'Delete edge',
+          destructive: true,
+          onClick: () => {
+            const newEdges = edges.filter((e) => e.id !== edge.id);
+            setEdges(newEdges);
+            onChange?.(nodes, newEdges);
+          },
+        },
+      ],
+    });
+  }, [edges, nodes, setEdges, onChange]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -93,6 +175,52 @@ export const Canvas: FC<CanvasProps> = ({
       onChange?.(nodes, newEdges);
     },
     [edges, nodes, onChange, setEdges]
+  );
+
+  const onConnectEnd = useCallback(
+    (event: MouseEvent | TouchEvent, connectionState: any) => {
+      // If connection didn't connect to a target node, create a new node
+      if (!connectionState.toNode) {
+        const targetIsPane = (event.target as Element)?.classList.contains('react-flow__pane');
+
+        if (targetIsPane) {
+          // Get the position where the connection ended
+          const clientX = 'changedTouches' in event ? event.changedTouches[0]?.clientX : event.clientX;
+          const clientY = 'changedTouches' in event ? event.changedTouches[0]?.clientY : event.clientY;
+
+          if (clientX === undefined || clientY === undefined) return;
+
+          const position = screenToFlowPosition({ x: clientX, y: clientY });
+
+          // Create new node at the drop position
+          const newNode: Node = {
+            id: `node-${Date.now()}`,
+            type: 'default',
+            position,
+            data: { label: 'New Node' },
+          };
+
+          const newNodes = [...nodes, newNode];
+          setNodes(newNodes);
+
+          // Create edge from source to new node
+          if (connectionState.fromNode) {
+            const newEdge = {
+              id: `e${connectionState.fromNode.id}-${newNode.id}`,
+              source: connectionState.fromNode.id,
+              target: newNode.id,
+              sourceHandle: connectionState.fromHandle?.id || null,
+            };
+            const newEdges = [...edges, newEdge];
+            setEdges(newEdges);
+            onChange?.(newNodes, newEdges);
+          } else {
+            onChange?.(newNodes, edges);
+          }
+        }
+      }
+    },
+    [screenToFlowPosition, nodes, edges, setNodes, setEdges, onChange]
   );
 
   const handleNodesChange = useCallback(
@@ -123,6 +251,10 @@ export const Canvas: FC<CanvasProps> = ({
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
+        onConnectEnd={onConnectEnd}
+        onPaneContextMenu={onPaneContextMenu}
+        onNodeContextMenu={onNodeContextMenu}
+        onEdgeContextMenu={onEdgeContextMenu}
         fitView
         snapToGrid
         snapGrid={[15, 15]}
@@ -135,6 +267,36 @@ export const Canvas: FC<CanvasProps> = ({
         {showControls && <Controls />}
         {showMiniMap && <MiniMap />}
       </ReactFlow>
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={contextMenu.items}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
+  );
+};
+
+/**
+ * Canvas - A workflow canvas component powered by React Flow
+ *
+ * @example
+ * ```tsx
+ * <Canvas
+ *   initialNodes={[
+ *     { id: '1', position: { x: 0, y: 0 }, data: { label: 'Node 1' } }
+ *   ]}
+ *   initialEdges={[]}
+ *   onChange={(nodes, edges) => console.log(nodes, edges)}
+ * />
+ * ```
+ */
+export const Canvas: FC<CanvasProps> = (props) => {
+  return (
+    <ReactFlowProvider>
+      <CanvasInner {...props} />
+    </ReactFlowProvider>
   );
 };
