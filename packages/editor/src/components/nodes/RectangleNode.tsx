@@ -1,8 +1,8 @@
 import { type FC, memo } from 'react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Handle, Position, type NodeProps as XYNodeProps, type Node } from '@xyflow/react';
 import { Rectangle } from '../elements/Rectangle';
 
-export interface RectangleNodeData {
+export type RectangleNodeData = {
   label?: string;
   width?: number;
   height?: number;
@@ -12,12 +12,15 @@ export interface RectangleNodeData {
   borderRadius?: number;
   labelColor?: string;
   labelSize?: number;
-}
+  [key: string]: unknown;
+};
+
+export type RectangleNodeType = Node<RectangleNodeData, 'rectangle'>;
 
 /**
  * RectangleNode - A custom React Flow node that uses the Rectangle component
  */
-export const RectangleNode: FC<NodeProps<RectangleNodeData>> = memo(({ data, selected }) => {
+export const RectangleNode: FC<XYNodeProps<RectangleNodeType>> = memo(({ data, selected }) => {
   return (
     <div style={{ position: 'relative' }}>
       {/* Connection handles */}
