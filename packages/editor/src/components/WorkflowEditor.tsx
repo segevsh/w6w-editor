@@ -1,4 +1,4 @@
-import { type FC, useCallback, useMemo } from 'react';
+import { type FC, useCallback } from 'react';
 import {
   ReactFlow,
   Background,
@@ -8,12 +8,10 @@ import {
   useEdgesState,
   addEdge,
   type Connection,
-  type NodeTypes,
   Panel,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { Workflow } from '../types';
-import { RectangleNode } from './nodes/RectangleNode';
 
 export interface WorkflowEditorProps {
   initialWorkflow?: Workflow;
@@ -62,7 +60,7 @@ export const WorkflowEditor: FC<WorkflowEditorProps> = ({
   showControls = true,
   showBackground = true,
 }) => {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialWorkflow.nodes);
+  const [nodes, , onNodesChange] = useNodesState(initialWorkflow.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialWorkflow.edges);
 
   const onConnect = useCallback(
@@ -105,6 +103,7 @@ export const WorkflowEditor: FC<WorkflowEditorProps> = ({
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
         fitView
+        proOptions={{ hideAttribution: true }}
       >
         {showBackground && <Background />}
         {showControls && <Controls />}
