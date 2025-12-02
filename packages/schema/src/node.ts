@@ -3,6 +3,7 @@ import { idSchema } from './id';
 import { positionSchema } from './position';
 import { CONSTS } from './consts';
 import { propertySchema } from './property';
+import { packageDefinitionSchema } from './package';
 
 export const nodeTypeEnum = z.enum([
     'trigger',
@@ -12,12 +13,22 @@ export const nodeTypeEnum = z.enum([
     'loop',
 ]);
 
-export const nodeSchema = z.object({
+export const actionType = z.enum([
+    'read',
+    'write',
+]);
+
+export const nodeSchema = packageDefinitionSchema.extend(z.object({
     id: idSchema(CONSTS.idPrefix.node),
 
     properties:   z.array(propertySchema).describe("List of properties associated with the credential").optional(),
 
     type: nodeTypeEnum.describe('Type of the node, e.g., trigger, action, transform'),
+
+    action: z.string().describe('Action identifier within the package'),
+
+    
+
 
     authenticationId: z.string().describe('ID for the connection used to authentciate this request').optional(),
 
@@ -38,4 +49,4 @@ export const nodeSchema = z.object({
     output: z.array(z.string()).describe('Output ports/handles for sending data').optional(),
 
     metadata: z.record(z.string(), z.any()).describe('Additional metadata for the node').optional(),
-});
+}));
