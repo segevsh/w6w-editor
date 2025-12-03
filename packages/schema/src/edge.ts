@@ -29,3 +29,5 @@ export const edgeSchema = z.object({
     label: z.string().describe('Optional label displayed on the edge').optional(),
 
 });
+
+export type Edge = z.infer<typeof edgeSchema>;

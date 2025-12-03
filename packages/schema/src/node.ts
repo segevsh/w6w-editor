@@ -50,3 +50,5 @@ export const nodeSchema = packageDefinitionSchema.extend(z.object({
 
     metadata: z.record(z.string(), z.any()).describe('Additional metadata for the node').optional(),
 }));
+
+export type Node = z.infer<typeof nodeSchema>;
