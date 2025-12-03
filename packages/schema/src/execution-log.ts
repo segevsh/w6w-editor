@@ -48,6 +48,10 @@ export const executionLogSchema = z.object({
     triggeredBy: z.string().optional().describe('User or system that triggered the execution'),
     triggerType: z.enum(['manual', 'scheduled', 'webhook', 'api']).optional(),
   }).optional().describe('Additional metadata about the execution'),
+
+  createdAt: z.date().optional().describe('Database record creation timestamp'),
+
+  updatedAt: z.date().optional().describe('Database record last update timestamp'),
 });
 
 export type LogLevel = z.infer<typeof logLevelSchema>;
