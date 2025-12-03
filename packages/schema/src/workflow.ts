@@ -5,7 +5,7 @@ import { nodeSchema } from './node';
 import { edgeSchema } from './edge';
 import { variableSchema } from './variable';
 
-export const workflowSchema = z.object({
+export const workflowSchema: z.ZodObject<any> = z.object({
   id: idSchema(CONSTS.idPrefix.workflow),
 
   name: z.string().min(1).max(100).describe('Display name of the workflow shown to the user'),

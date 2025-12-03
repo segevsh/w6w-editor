@@ -147,7 +147,7 @@ export type AuthMethod = z.infer<typeof authMethodSchema>;
  * Credential Schema
  * @description Schema for storing and managing authentication credentials
  */
-export const credentialSchema = packageDefinitionSchema.extend(z.object({
+export const credentialSchema: z.ZodObject<any> = packageDefinitionSchema.extend(z.object({
     /**
      * Credential unique key
      * @description Unique identifier for the credential

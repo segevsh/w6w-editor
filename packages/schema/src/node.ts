@@ -18,7 +18,7 @@ export const actionType = z.enum([
     'write',
 ]);
 
-export const nodeSchema = packageDefinitionSchema.extend(z.object({
+export const nodeSchema: z.ZodObject<any> = packageDefinitionSchema.extend(z.object({
     id: idSchema(CONSTS.idPrefix.node),
 
     properties:   z.array(propertySchema).describe("List of properties associated with the credential").optional(),
