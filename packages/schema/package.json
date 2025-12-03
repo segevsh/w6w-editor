@@ -10,6 +10,26 @@
         ".": {
             "types": "./src/index.ts",
             "import": "./src/index.ts"
+        },
+        "./workflow.ts": {
+            "types": "./src/workflow.ts",
+            "import": "./src/workflow.ts"
+        },
+        "./node.ts": {
+            "types": "./src/node.ts",
+            "import": "./src/node.ts"
+        },
+        "./edge.ts": {
+            "types": "./src/edge.ts",
+            "import": "./src/edge.ts"
+        },
+        "./variable.ts": {
+            "types": "./src/variable.ts",
+            "import": "./src/variable.ts"
+        },
+        "./execution-log.ts": {
+            "types": "./src/execution-log.ts",
+            "import": "./src/execution-log.ts"
         }
     },
     "scripts": {
