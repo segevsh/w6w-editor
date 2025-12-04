@@ -28,8 +28,6 @@ export const nodeSchema: z.ZodObject<any> = packageDefinitionSchema.extend(z.obj
     action: z.string().describe('Action identifier within the package'),
 
     
-
-
     authenticationId: z.string().describe('ID for the connection used to authentciate this request').optional(),
 
     label: z.string().describe('Display label shown in the editor').optional(),
