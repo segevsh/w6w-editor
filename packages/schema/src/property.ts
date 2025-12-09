@@ -114,6 +114,9 @@ export const propertySchema = z.object({
      */
     editorOptions: editorOptionsSchema.optional(),
 
+
+    secret: z.boolean().default(false).describe("Indicates whether the property is a secret"),
+
     /**
      * Metadata
      * @description Additional metadata for the property
