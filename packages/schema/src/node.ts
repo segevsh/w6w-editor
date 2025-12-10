@@ -18,7 +18,7 @@ export const actionType = z.enum([
     'write',
 ]);
 
-export const nodeSchema: z.ZodObject<any> = packageDefinitionSchema.extend(z.object({
+export const nodeSchema: z.ZodObject<any> = packageDefinitionSchema.extend({
     id: idSchema(CONSTS.idPrefix.node),
 
     properties:   z.array(propertySchema).describe("List of properties associated with the credential").optional(),
@@ -27,7 +27,7 @@ export const nodeSchema: z.ZodObject<any> = packageDefinitionSchema.extend(z.obj
 
     action: z.string().describe('Action identifier within the package'),
 
-    
+
     authenticationId: z.string().describe('ID for the connection used to authentciate this request').optional(),
 
     label: z.string().describe('Display label shown in the editor').optional(),
@@ -47,6 +47,6 @@ export const nodeSchema: z.ZodObject<any> = packageDefinitionSchema.extend(z.obj
     output: z.array(z.string()).describe('Output ports/handles for sending data').optional(),
 
     metadata: z.record(z.string(), z.any()).describe('Additional metadata for the node').optional(),
-}));
+});
 
 export type Node = z.infer<typeof nodeSchema>;

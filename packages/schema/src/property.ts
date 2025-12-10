@@ -19,7 +19,7 @@ export const editorOptionsSchema = z.object({
      * @example ["option1", "option2", "option3"]
      * @example [{ label: "Option 1", value: "opt1" }, { label: "Option 2", value: "opt2" }]
      */
-    options: z.array(z.union([z.string(), z.object(dropdownOptionSchema)])).optional(),
+    options: z.array(z.union([z.string(), dropdownOptionSchema])).optional(),
 
     /**
      * Placeholder text
