@@ -39,6 +39,11 @@ export interface WorkflowEditorProps {
    * @default true
    */
   showBackground?: boolean;
+  /**
+   * Color mode for the editor canvas
+   * @default 'light'
+   */
+  colorMode?: 'light' | 'dark' | 'system';
 }
 
 /**
@@ -66,7 +71,9 @@ export const WorkflowEditor: FC<WorkflowEditorProps> = ({
   showMiniMap = true,
   showControls = true,
   showBackground = true,
+  colorMode = 'light',
 }) => {
+  const isDark = colorMode === 'dark' || (colorMode === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [nodes, , onNodesChange] = useNodesState(initialWorkflow.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialWorkflow.edges);
 
@@ -111,13 +118,20 @@ export const WorkflowEditor: FC<WorkflowEditorProps> = ({
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
         fitView
+        colorMode={colorMode}
         proOptions={{ hideAttribution: true }}
       >
         {showBackground && <Background />}
         {showControls && <Controls />}
         {showMiniMap && <MiniMap />}
         <Panel position="top-left">
-          <div style={{ padding: '8px', background: 'white', borderRadius: '4px', fontSize: '12px' }}>
+          <div style={{
+            padding: '8px',
+            background: isDark ? '#1f2937' : 'white',
+            borderRadius: '4px',
+            fontSize: '12px',
+            color: isDark ? '#e5e7eb' : '#374151'
+          }}>
             <strong>W6W Workflow Editor</strong>
           </div>
         </Panel>
