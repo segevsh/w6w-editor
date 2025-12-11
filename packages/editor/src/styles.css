@@ -12,6 +12,54 @@
   height: 100%;
 }
 
+/* Dark mode styles for React Flow components */
+.react-flow.dark {
+  /* Controls (zoom buttons) */
+  --xy-controls-button-background-color: #374151;
+  --xy-controls-button-background-color-hover: #4b5563;
+  --xy-controls-button-color: #e5e7eb;
+  --xy-controls-button-color-hover: #f9fafb;
+  --xy-controls-button-border-color: #4b5563;
+
+  /* MiniMap */
+  --xy-minimap-background-color: #1f2937;
+  --xy-minimap-mask-background-color: rgba(31, 41, 55, 0.6);
+  --xy-minimap-mask-stroke-color: #6b7280;
+  --xy-minimap-node-background-color: #4b5563;
+  --xy-minimap-node-stroke-color: #6b7280;
+
+  /* Background */
+  --xy-background-color: #111827;
+  --xy-background-pattern-color: #374151;
+}
+
+/* Override controls button styles in dark mode */
+.react-flow.dark .react-flow__controls {
+  background: #1f2937;
+  border: 1px solid #374151;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+.react-flow.dark .react-flow__controls-button {
+  background: #374151;
+  border-bottom: 1px solid #4b5563;
+  fill: #e5e7eb;
+}
+
+.react-flow.dark .react-flow__controls-button:hover {
+  background: #4b5563;
+}
+
+.react-flow.dark .react-flow__controls-button svg {
+  fill: #e5e7eb;
+}
+
+/* MiniMap dark mode overrides */
+.react-flow.dark .react-flow__minimap {
+  background: #1f2937;
+  border: 1px solid #374151;
+}
+
 /* Context Menu Styles */
 .context-menu {
   background: white;
