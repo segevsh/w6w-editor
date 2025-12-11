@@ -1,0 +1,153 @@
+{
+  "id": "wf_conditional_user_routing",
+  "name": "User Type Routing",
+  "description": "Routes users to different onboarding flows based on their account type",
+  "version": "1.0.0",
+  "status": "active",
+  "tags": ["routing", "conditional", "onboarding"],
+  "nodes": [
+    {
+      "id": "nd_user_signup",
+      "type": "trigger",
+      "package": "core",
+      "app": "core",
+      "version": "1.0.0",
+      "action": "user.signup",
+      "label": "User Signup",
+      "position": [100, 300],
+      "disabled": false,
+      "output": ["out1"]
+    },
+    {
+      "id": "nd_check_user_type",
+      "type": "condition",
+      "package": "core",
+      "app": "core",
+      "version": "1.0.0",
+      "action": "condition.switch",
+      "label": "Check User Type",
+      "position": [350, 300],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["premium", "standard", "trial"],
+      "config": {
+        "field": "{{nd_user_signup.output.user.accountType}}",
+        "cases": [
+          { "value": "premium", "output": "premium" },
+          { "value": "standard", "output": "standard" }
+        ],
+        "default": "trial"
+      }
+    },
+    {
+      "id": "nd_premium_onboarding",
+      "type": "action",
+      "package": "core",
+      "app": "email",
+      "version": "1.0.0",
+      "action": "send_template",
+      "label": "Premium Welcome",
+      "position": [600, 100],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "config": {
+        "templateId": "tpl_premium_welcome",
+        "to": "{{nd_user_signup.output.user.email}}",
+        "personalManager": true
+      }
+    },
+    {
+      "id": "nd_standard_onboarding",
+      "type": "action",
+      "package": "core",
+      "app": "email",
+      "version": "1.0.0",
+      "action": "send_template",
+      "label": "Standard Welcome",
+      "position": [600, 300],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "config": {
+        "templateId": "tpl_standard_welcome",
+        "to": "{{nd_user_signup.output.user.email}}"
+      }
+    },
+    {
+      "id": "nd_trial_onboarding",
+      "type": "action",
+      "package": "core",
+      "app": "email",
+      "version": "1.0.0",
+      "action": "send_template",
+      "label": "Trial Welcome",
+      "position": [600, 500],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "config": {
+        "templateId": "tpl_trial_welcome",
+        "to": "{{nd_user_signup.output.user.email}}",
+        "trialDays": 14
+      }
+    },
+    {
+      "id": "nd_update_crm",
+      "type": "action",
+      "package": "salesforce",
+      "app": "salesforce",
+      "version": "1.0.0",
+      "action": "contact.create",
+      "label": "Update CRM",
+      "position": [850, 300],
+      "disabled": false,
+      "input": ["in1", "in2", "in3"],
+      "config": {
+        "email": "{{nd_user_signup.output.user.email}}",
+        "name": "{{nd_user_signup.output.user.name}}",
+        "type": "{{nd_user_signup.output.user.accountType}}"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "ed_signup_to_check",
+      "source": "nd_user_signup:out1",
+      "target": "nd_check_user_type:in1"
+    },
+    {
+      "id": "ed_check_to_premium",
+      "source": "nd_check_user_type:premium",
+      "target": "nd_premium_onboarding:in1",
+      "label": "premium"
+    },
+    {
+      "id": "ed_check_to_standard",
+      "source": "nd_check_user_type:standard",
+      "target": "nd_standard_onboarding:in1",
+      "label": "standard"
+    },
+    {
+      "id": "ed_check_to_trial",
+      "source": "nd_check_user_type:trial",
+      "target": "nd_trial_onboarding:in1",
+      "label": "trial"
+    },
+    {
+      "id": "ed_premium_to_crm",
+      "source": "nd_premium_onboarding:out1",
+      "target": "nd_update_crm:in1"
+    },
+    {
+      "id": "ed_standard_to_crm",
+      "source": "nd_standard_onboarding:out1",
+      "target": "nd_update_crm:in2"
+    },
+    {
+      "id": "ed_trial_to_crm",
+      "source": "nd_trial_onboarding:out1",
+      "target": "nd_update_crm:in3"
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "id": "wf_simple_http_webhook",
+  "name": "Simple HTTP Webhook",
+  "description": "A basic webhook that receives data and forwards it to an external API",
+  "version": "1.0.0",
+  "status": "active",
+  "tags": ["webhook", "http", "simple"],
+  "nodes": [
+    {
+      "id": "nd_webhook_trigger",
+      "type": "trigger",
+      "package": "core",
+      "app": "core",
+      "version": "1.0.0",
+      "action": "webhook.receive",
+      "label": "Receive Webhook",
+      "position": [100, 200],
+      "disabled": false,
+      "output": ["out1"]
+    },
+    {
+      "id": "nd_http_request",
+      "type": "action",
+      "package": "core",
+      "app": "http",
+      "version": "1.0.0",
+      "action": "request",
+      "label": "Forward to API",
+      "position": [350, 200],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "config": {
+        "method": "POST",
+        "url": "https://api.example.com/webhook",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{{nd_webhook_trigger.output.body}}"
+      }
+    },
+    {
+      "id": "nd_log_response",
+      "type": "action",
+      "package": "core",
+      "app": "core",
+      "version": "1.0.0",
+      "action": "log",
+      "label": "Log Response",
+      "position": [600, 200],
+      "disabled": false,
+      "input": ["in1"],
+      "config": {
+        "message": "API responded with status: {{nd_http_request.output.status}}",
+        "level": "info"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "ed_trigger_to_http",
+      "source": "nd_webhook_trigger:out1",
+      "target": "nd_http_request:in1"
+    },
+    {
+      "id": "ed_http_to_log",
+      "source": "nd_http_request:out1",
+      "target": "nd_log_response:in1"
+    }
+  ]
+}

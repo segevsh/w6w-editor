@@ -1,0 +1,335 @@
+{
+  "id": "wf_order_error_handling",
+  "name": "Order Processing with Retry",
+  "description": "Processes orders with comprehensive error handling, retries, and fallback paths",
+  "version": "1.2.0",
+  "status": "active",
+  "tags": ["orders", "error-handling", "retry", "production"],
+  "vars": {
+    "maxRetries": {
+      "name": "maxRetries",
+      "type": "number",
+      "isSecret": false,
+      "defaultValue": 3,
+      "description": "Maximum retry attempts for failed operations"
+    },
+    "alertEmail": {
+      "name": "alertEmail",
+      "type": "string",
+      "isSecret": false,
+      "defaultValue": "ops@company.com",
+      "description": "Email address for critical alerts"
+    }
+  },
+  "nodes": [
+    {
+      "id": "nd_new_order",
+      "type": "trigger",
+      "package": "core",
+      "app": "core",
+      "version": "1.0.0",
+      "action": "order.created",
+      "label": "New Order",
+      "position": [100, 300],
+      "disabled": false,
+      "output": ["out1"]
+    },
+    {
+      "id": "nd_validate_order",
+      "type": "action",
+      "package": "core",
+      "app": "validation",
+      "version": "1.0.0",
+      "action": "validate_schema",
+      "label": "Validate Order",
+      "position": [300, 300],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["success", "error"],
+      "config": {
+        "schema": "order_v2",
+        "strict": true
+      }
+    },
+    {
+      "id": "nd_check_inventory",
+      "type": "action",
+      "package": "inventory",
+      "app": "inventory",
+      "version": "1.0.0",
+      "action": "check_availability",
+      "label": "Check Inventory",
+      "position": [500, 250],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["success", "error"],
+      "config": {
+        "items": "{{nd_new_order.output.items}}",
+        "warehouseId": "{{nd_new_order.output.warehouseId}}"
+      }
+    },
+    {
+      "id": "nd_process_payment",
+      "type": "action",
+      "package": "stripe",
+      "app": "stripe",
+      "version": "1.0.0",
+      "action": "charge",
+      "label": "Process Payment",
+      "position": [700, 250],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["success", "error"],
+      "authenticationId": "cn_stripe_live",
+      "config": {
+        "amount": "{{nd_new_order.output.total}}",
+        "currency": "{{nd_new_order.output.currency}}",
+        "customerId": "{{nd_new_order.output.customer.stripeId}}",
+        "metadata": {
+          "orderId": "{{nd_new_order.output.orderId}}"
+        }
+      }
+    },
+    {
+      "id": "nd_create_shipment",
+      "type": "action",
+      "package": "shippo",
+      "app": "shippo",
+      "version": "1.0.0",
+      "action": "create_label",
+      "label": "Create Shipment",
+      "position": [900, 250],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["success", "error"],
+      "authenticationId": "cn_shippo_prod",
+      "config": {
+        "address": "{{nd_new_order.output.shippingAddress}}",
+        "weight": "{{nd_check_inventory.output.totalWeight}}",
+        "carrier": "usps"
+      }
+    },
+    {
+      "id": "nd_confirm_order",
+      "type": "action",
+      "package": "core",
+      "app": "database",
+      "version": "1.0.0",
+      "action": "update",
+      "label": "Confirm Order",
+      "position": [1100, 250],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "config": {
+        "table": "orders",
+        "where": { "id": "{{nd_new_order.output.orderId}}" },
+        "data": {
+          "status": "confirmed",
+          "paymentId": "{{nd_process_payment.output.chargeId}}",
+          "trackingNumber": "{{nd_create_shipment.output.trackingNumber}}"
+        }
+      }
+    },
+    {
+      "id": "nd_validation_error",
+      "type": "action",
+      "package": "core",
+      "app": "core",
+      "version": "1.0.0",
+      "action": "log",
+      "label": "Log Validation Error",
+      "position": [300, 500],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "config": {
+        "level": "error",
+        "message": "Order validation failed",
+        "data": "{{nd_validate_order.error}}"
+      }
+    },
+    {
+      "id": "nd_inventory_error",
+      "type": "condition",
+      "package": "core",
+      "app": "core",
+      "version": "1.0.0",
+      "action": "condition.check",
+      "label": "Retry Available?",
+      "position": [500, 450],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["retry", "give_up"],
+      "config": {
+        "condition": "{{execution.retryCount}} < {{vars.maxRetries}}",
+        "trueOutput": "retry",
+        "falseOutput": "give_up"
+      }
+    },
+    {
+      "id": "nd_wait_retry",
+      "type": "action",
+      "package": "core",
+      "app": "core",
+      "version": "1.0.0",
+      "action": "delay",
+      "label": "Wait & Retry",
+      "position": [700, 400],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "config": {
+        "duration": 5000,
+        "exponentialBackoff": true
+      }
+    },
+    {
+      "id": "nd_payment_error",
+      "type": "action",
+      "package": "core",
+      "app": "database",
+      "version": "1.0.0",
+      "action": "update",
+      "label": "Mark Payment Failed",
+      "position": [700, 550],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "config": {
+        "table": "orders",
+        "where": { "id": "{{nd_new_order.output.orderId}}" },
+        "data": {
+          "status": "payment_failed",
+          "errorDetails": "{{nd_process_payment.error}}"
+        }
+      }
+    },
+    {
+      "id": "nd_shipment_error",
+      "type": "action",
+      "package": "core",
+      "app": "database",
+      "version": "1.0.0",
+      "action": "update",
+      "label": "Mark Shipment Failed",
+      "position": [900, 450],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "config": {
+        "table": "orders",
+        "where": { "id": "{{nd_new_order.output.orderId}}" },
+        "data": {
+          "status": "shipment_pending",
+          "shipmentError": "{{nd_create_shipment.error}}"
+        }
+      }
+    },
+    {
+      "id": "nd_alert_ops",
+      "type": "action",
+      "package": "sendgrid",
+      "app": "sendgrid",
+      "version": "1.0.0",
+      "action": "send_email",
+      "label": "Alert Operations",
+      "position": [900, 600],
+      "disabled": false,
+      "input": ["in1", "in2", "in3"],
+      "authenticationId": "cn_sendgrid_internal",
+      "config": {
+        "to": "{{vars.alertEmail}}",
+        "subject": "Order Processing Failed: {{nd_new_order.output.orderId}}",
+        "templateId": "d-ops-alert-order-failed"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "ed_trigger_to_validate",
+      "source": "nd_new_order:out1",
+      "target": "nd_validate_order:in1"
+    },
+    {
+      "id": "ed_validate_success",
+      "source": "nd_validate_order:success",
+      "target": "nd_check_inventory:in1",
+      "label": "valid"
+    },
+    {
+      "id": "ed_validate_error",
+      "source": "nd_validate_order:error",
+      "target": "nd_validation_error:in1",
+      "label": "invalid"
+    },
+    {
+      "id": "ed_inventory_success",
+      "source": "nd_check_inventory:success",
+      "target": "nd_process_payment:in1",
+      "label": "in stock"
+    },
+    {
+      "id": "ed_inventory_error",
+      "source": "nd_check_inventory:error",
+      "target": "nd_inventory_error:in1",
+      "label": "out of stock"
+    },
+    {
+      "id": "ed_retry_inventory",
+      "source": "nd_inventory_error:retry",
+      "target": "nd_wait_retry:in1",
+      "label": "retry"
+    },
+    {
+      "id": "ed_wait_to_inventory",
+      "source": "nd_wait_retry:out1",
+      "target": "nd_check_inventory:in1"
+    },
+    {
+      "id": "ed_give_up_inventory",
+      "source": "nd_inventory_error:give_up",
+      "target": "nd_alert_ops:in1",
+      "label": "max retries"
+    },
+    {
+      "id": "ed_payment_success",
+      "source": "nd_process_payment:success",
+      "target": "nd_create_shipment:in1",
+      "label": "paid"
+    },
+    {
+      "id": "ed_payment_error",
+      "source": "nd_process_payment:error",
+      "target": "nd_payment_error:in1",
+      "label": "failed"
+    },
+    {
+      "id": "ed_payment_error_to_alert",
+      "source": "nd_payment_error:out1",
+      "target": "nd_alert_ops:in2"
+    },
+    {
+      "id": "ed_shipment_success",
+      "source": "nd_create_shipment:success",
+      "target": "nd_confirm_order:in1",
+      "label": "shipped"
+    },
+    {
+      "id": "ed_shipment_error",
+      "source": "nd_create_shipment:error",
+      "target": "nd_shipment_error:in1",
+      "label": "failed"
+    },
+    {
+      "id": "ed_shipment_error_to_alert",
+      "source": "nd_shipment_error:out1",
+      "target": "nd_alert_ops:in3"
+    },
+    {
+      "id": "ed_validation_to_alert",
+      "source": "nd_validation_error:out1",
+      "target": "nd_alert_ops:in1"
+    }
+  ]
+}

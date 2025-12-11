@@ -1,0 +1,307 @@
+{
+  "id": "wf_data_etl_pipeline",
+  "name": "Customer Data ETL Pipeline",
+  "description": "Extracts customer data from multiple sources, transforms it, and loads into analytics warehouse",
+  "version": "2.0.0",
+  "status": "active",
+  "icon": "📊",
+  "tags": ["etl", "data", "analytics", "scheduled"],
+  "vars": {
+    "batchSize": {
+      "name": "batchSize",
+      "type": "number",
+      "isSecret": false,
+      "defaultValue": 1000,
+      "description": "Number of records to process per batch"
+    },
+    "warehouseTable": {
+      "name": "warehouseTable",
+      "type": "string",
+      "isSecret": false,
+      "defaultValue": "customer_analytics",
+      "description": "Target table in the data warehouse"
+    }
+  },
+  "nodes": [
+    {
+      "id": "nd_scheduled_trigger",
+      "type": "trigger",
+      "package": "core",
+      "app": "core",
+      "version": "1.0.0",
+      "action": "schedule.cron",
+      "label": "Daily 2AM UTC",
+      "position": [100, 300],
+      "disabled": false,
+      "output": ["out1"],
+      "config": {
+        "cron": "0 2 * * *",
+        "timezone": "UTC"
+      }
+    },
+    {
+      "id": "nd_fetch_postgres",
+      "type": "action",
+      "package": "postgresql",
+      "app": "postgresql",
+      "version": "1.0.0",
+      "action": "query",
+      "label": "Fetch from Postgres",
+      "position": [300, 200],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "authenticationId": "cn_postgres_prod",
+      "config": {
+        "query": "SELECT * FROM customers WHERE updated_at > NOW() - INTERVAL '1 day'",
+        "batchSize": "{{vars.batchSize}}"
+      }
+    },
+    {
+      "id": "nd_fetch_mongodb",
+      "type": "action",
+      "package": "mongodb",
+      "app": "mongodb",
+      "version": "1.0.0",
+      "action": "find",
+      "label": "Fetch from MongoDB",
+      "position": [300, 400],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "authenticationId": "cn_mongodb_prod",
+      "config": {
+        "collection": "customer_events",
+        "filter": {
+          "timestamp": { "$gte": "{{execution.startTime - 86400000}}" }
+        },
+        "limit": "{{vars.batchSize}}"
+      }
+    },
+    {
+      "id": "nd_merge_data",
+      "type": "transform",
+      "package": "core",
+      "app": "transform",
+      "version": "1.0.0",
+      "action": "merge",
+      "label": "Merge Data Sources",
+      "position": [500, 300],
+      "disabled": false,
+      "input": ["postgres", "mongodb"],
+      "output": ["out1"],
+      "config": {
+        "joinKey": "customer_id",
+        "strategy": "left"
+      }
+    },
+    {
+      "id": "nd_clean_data",
+      "type": "transform",
+      "package": "core",
+      "app": "transform",
+      "version": "1.0.0",
+      "action": "clean",
+      "label": "Clean & Normalize",
+      "position": [700, 300],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "config": {
+        "operations": [
+          { "type": "trim", "fields": ["email", "name"] },
+          { "type": "lowercase", "fields": ["email"] },
+          { "type": "removeNull", "fields": "*" },
+          { "type": "deduplicate", "key": "customer_id" }
+        ]
+      }
+    },
+    {
+      "id": "nd_enrich_data",
+      "type": "transform",
+      "package": "core",
+      "app": "transform",
+      "version": "1.0.0",
+      "action": "map",
+      "label": "Enrich & Calculate",
+      "position": [900, 300],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "config": {
+        "mappings": {
+          "customer_id": "{{item.customer_id}}",
+          "email": "{{item.email}}",
+          "name": "{{item.name}}",
+          "total_orders": "{{item.order_count || 0}}",
+          "total_spent": "{{item.lifetime_value || 0}}",
+          "avg_order_value": "{{(item.lifetime_value || 0) / Math.max(item.order_count, 1)}}",
+          "last_activity": "{{item.last_event_timestamp || item.updated_at}}",
+          "segment": "{{item.lifetime_value > 1000 ? 'high_value' : item.lifetime_value > 100 ? 'medium_value' : 'low_value'}}",
+          "processed_at": "{{execution.startTime}}"
+        }
+      }
+    },
+    {
+      "id": "nd_loop_batches",
+      "type": "loop",
+      "package": "core",
+      "app": "core",
+      "version": "1.0.0",
+      "action": "forEach",
+      "label": "Process in Batches",
+      "position": [1100, 300],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["item", "done"],
+      "config": {
+        "batchSize": "{{vars.batchSize}}",
+        "parallel": false
+      }
+    },
+    {
+      "id": "nd_load_warehouse",
+      "type": "action",
+      "package": "bigquery",
+      "app": "bigquery",
+      "version": "1.0.0",
+      "action": "insert",
+      "label": "Load to BigQuery",
+      "position": [1300, 250],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "authenticationId": "cn_bigquery_analytics",
+      "config": {
+        "dataset": "analytics",
+        "table": "{{vars.warehouseTable}}",
+        "writeDisposition": "WRITE_APPEND",
+        "data": "{{nd_loop_batches.item}}"
+      }
+    },
+    {
+      "id": "nd_update_cache",
+      "type": "action",
+      "package": "redis",
+      "app": "redis",
+      "version": "1.0.0",
+      "action": "mset",
+      "label": "Update Cache",
+      "position": [1300, 400],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "authenticationId": "cn_redis_cache",
+      "config": {
+        "prefix": "customer:",
+        "data": "{{nd_loop_batches.item}}",
+        "ttl": 86400
+      }
+    },
+    {
+      "id": "nd_generate_report",
+      "type": "action",
+      "package": "core",
+      "app": "reporting",
+      "version": "1.0.0",
+      "action": "generate_summary",
+      "label": "Generate Report",
+      "position": [1500, 300],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "config": {
+        "metrics": ["total_processed", "by_segment", "errors"],
+        "format": "json"
+      }
+    },
+    {
+      "id": "nd_send_report",
+      "type": "action",
+      "package": "slack",
+      "app": "slack",
+      "version": "1.0.0",
+      "action": "send_message",
+      "label": "Send to Slack",
+      "position": [1700, 300],
+      "disabled": false,
+      "input": ["in1"],
+      "authenticationId": "cn_slack_analytics",
+      "config": {
+        "channel": "#data-pipelines",
+        "blocks": [
+          {
+            "type": "header",
+            "text": "ETL Pipeline Completed ✅"
+          },
+          {
+            "type": "section",
+            "text": "Processed {{nd_generate_report.output.total_processed}} customers"
+          }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "ed_trigger_to_postgres",
+      "source": "nd_scheduled_trigger:out1",
+      "target": "nd_fetch_postgres:in1"
+    },
+    {
+      "id": "ed_trigger_to_mongodb",
+      "source": "nd_scheduled_trigger:out1",
+      "target": "nd_fetch_mongodb:in1"
+    },
+    {
+      "id": "ed_postgres_to_merge",
+      "source": "nd_fetch_postgres:out1",
+      "target": "nd_merge_data:postgres",
+      "label": "postgres"
+    },
+    {
+      "id": "ed_mongodb_to_merge",
+      "source": "nd_fetch_mongodb:out1",
+      "target": "nd_merge_data:mongodb",
+      "label": "mongodb"
+    },
+    {
+      "id": "ed_merge_to_clean",
+      "source": "nd_merge_data:out1",
+      "target": "nd_clean_data:in1"
+    },
+    {
+      "id": "ed_clean_to_enrich",
+      "source": "nd_clean_data:out1",
+      "target": "nd_enrich_data:in1"
+    },
+    {
+      "id": "ed_enrich_to_loop",
+      "source": "nd_enrich_data:out1",
+      "target": "nd_loop_batches:in1"
+    },
+    {
+      "id": "ed_loop_to_warehouse",
+      "source": "nd_loop_batches:item",
+      "target": "nd_load_warehouse:in1",
+      "label": "batch"
+    },
+    {
+      "id": "ed_loop_to_cache",
+      "source": "nd_loop_batches:item",
+      "target": "nd_update_cache:in1",
+      "label": "batch"
+    },
+    {
+      "id": "ed_loop_done_to_report",
+      "source": "nd_loop_batches:done",
+      "target": "nd_generate_report:in1",
+      "label": "complete"
+    },
+    {
+      "id": "ed_report_to_slack",
+      "source": "nd_generate_report:out1",
+      "target": "nd_send_report:in1"
+    }
+  ]
+}

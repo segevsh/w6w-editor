@@ -1,0 +1,200 @@
+{
+  "id": "wf_parallel_notifications",
+  "name": "Multi-Channel Notification",
+  "description": "Sends notifications across multiple channels in parallel and aggregates results",
+  "version": "1.0.0",
+  "status": "active",
+  "tags": ["notifications", "parallel", "multi-channel"],
+  "nodes": [
+    {
+      "id": "nd_order_completed",
+      "type": "trigger",
+      "package": "core",
+      "app": "core",
+      "version": "1.0.0",
+      "action": "order.completed",
+      "label": "Order Completed",
+      "position": [100, 300],
+      "disabled": false,
+      "output": ["out1"]
+    },
+    {
+      "id": "nd_split_channels",
+      "type": "action",
+      "package": "core",
+      "app": "core",
+      "version": "1.0.0",
+      "action": "parallel.split",
+      "label": "Split to Channels",
+      "position": [300, 300],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["email", "sms", "push", "slack"],
+      "notes": "Broadcasts the order data to all notification channels simultaneously"
+    },
+    {
+      "id": "nd_send_email",
+      "type": "action",
+      "package": "sendgrid",
+      "app": "sendgrid",
+      "version": "1.0.0",
+      "action": "send_email",
+      "label": "Send Email",
+      "position": [550, 100],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "authenticationId": "cn_sendgrid_prod",
+      "config": {
+        "to": "{{nd_order_completed.output.customer.email}}",
+        "subject": "Order #{{nd_order_completed.output.orderId}} Confirmed",
+        "templateId": "d-abc123orderconfirm"
+      }
+    },
+    {
+      "id": "nd_send_sms",
+      "type": "action",
+      "package": "twilio",
+      "app": "twilio",
+      "version": "1.0.0",
+      "action": "send_sms",
+      "label": "Send SMS",
+      "position": [550, 250],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "authenticationId": "cn_twilio_prod",
+      "config": {
+        "to": "{{nd_order_completed.output.customer.phone}}",
+        "body": "Your order #{{nd_order_completed.output.orderId}} has been confirmed!"
+      }
+    },
+    {
+      "id": "nd_send_push",
+      "type": "action",
+      "package": "firebase",
+      "app": "fcm",
+      "version": "1.0.0",
+      "action": "send_push",
+      "label": "Send Push",
+      "position": [550, 400],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "authenticationId": "cn_firebase_prod",
+      "config": {
+        "token": "{{nd_order_completed.output.customer.deviceToken}}",
+        "title": "Order Confirmed!",
+        "body": "Your order #{{nd_order_completed.output.orderId}} is on its way"
+      }
+    },
+    {
+      "id": "nd_send_slack",
+      "type": "action",
+      "package": "slack",
+      "app": "slack",
+      "version": "1.0.0",
+      "action": "send_message",
+      "label": "Notify Team",
+      "position": [550, 550],
+      "disabled": false,
+      "input": ["in1"],
+      "output": ["out1"],
+      "authenticationId": "cn_slack_workspace",
+      "config": {
+        "channel": "#orders",
+        "text": "New order #{{nd_order_completed.output.orderId}} from {{nd_order_completed.output.customer.name}}"
+      }
+    },
+    {
+      "id": "nd_aggregate_results",
+      "type": "action",
+      "package": "core",
+      "app": "core",
+      "version": "1.0.0",
+      "action": "parallel.merge",
+      "label": "Aggregate Results",
+      "position": [800, 300],
+      "disabled": false,
+      "input": ["email", "sms", "push", "slack"],
+      "output": ["out1"],
+      "config": {
+        "waitForAll": true,
+        "timeout": 30000
+      }
+    },
+    {
+      "id": "nd_log_summary",
+      "type": "action",
+      "package": "core",
+      "app": "core",
+      "version": "1.0.0",
+      "action": "log",
+      "label": "Log Summary",
+      "position": [1000, 300],
+      "disabled": false,
+      "input": ["in1"],
+      "config": {
+        "message": "Notifications sent for order {{nd_order_completed.output.orderId}}",
+        "data": "{{nd_aggregate_results.output}}",
+        "level": "info"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "ed_trigger_to_split",
+      "source": "nd_order_completed:out1",
+      "target": "nd_split_channels:in1"
+    },
+    {
+      "id": "ed_split_to_email",
+      "source": "nd_split_channels:email",
+      "target": "nd_send_email:in1",
+      "label": "email"
+    },
+    {
+      "id": "ed_split_to_sms",
+      "source": "nd_split_channels:sms",
+      "target": "nd_send_sms:in1",
+      "label": "sms"
+    },
+    {
+      "id": "ed_split_to_push",
+      "source": "nd_split_channels:push",
+      "target": "nd_send_push:in1",
+      "label": "push"
+    },
+    {
+      "id": "ed_split_to_slack",
+      "source": "nd_split_channels:slack",
+      "target": "nd_send_slack:in1",
+      "label": "slack"
+    },
+    {
+      "id": "ed_email_to_merge",
+      "source": "nd_send_email:out1",
+      "target": "nd_aggregate_results:email"
+    },
+    {
+      "id": "ed_sms_to_merge",
+      "source": "nd_send_sms:out1",
+      "target": "nd_aggregate_results:sms"
+    },
+    {
+      "id": "ed_push_to_merge",
+      "source": "nd_send_push:out1",
+      "target": "nd_aggregate_results:push"
+    },
+    {
+      "id": "ed_slack_to_merge",
+      "source": "nd_send_slack:out1",
+      "target": "nd_aggregate_results:slack"
+    },
+    {
+      "id": "ed_merge_to_log",
+      "source": "nd_aggregate_results:out1",
+      "target": "nd_log_summary:in1"
+    }
+  ]
+}

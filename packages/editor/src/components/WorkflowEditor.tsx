@@ -9,9 +9,11 @@ import {
   addEdge,
   type Connection,
   Panel,
+  type NodeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { Workflow } from '../types';
+import { WorkflowNode } from './nodes/WorkflowNode';
 
 export interface WorkflowEditorProps {
   initialWorkflow?: Workflow;
@@ -51,6 +53,11 @@ export interface WorkflowEditorProps {
  * />
  * ```
  */
+// Define custom node types outside component to prevent re-renders
+const nodeTypes: NodeTypes = {
+  workflow: WorkflowNode,
+};
+
 export const WorkflowEditor: FC<WorkflowEditorProps> = ({
   initialWorkflow = { nodes: [], edges: [] },
   onChange,
@@ -99,6 +106,7 @@ export const WorkflowEditor: FC<WorkflowEditorProps> = ({
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        nodeTypes={nodeTypes}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
