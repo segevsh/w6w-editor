@@ -1,4 +1,4 @@
-import { useCallback, useState, useImperativeHandle, forwardRef } from 'react';
+import { useCallback, useState, useImperativeHandle, forwardRef, useRef, useMemo } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -13,10 +13,12 @@ import {
   type Edge,
   BackgroundVariant,
   useReactFlow,
+  useViewport,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { ContextMenu, type ContextMenuItem } from './ui/ContextMenu';
 import type { ContextMenuCallbacks, PendingConnection } from '../types';
+import '../styles.css';
 
 /**
  * Handle interface for Canvas component to expose imperative methods
@@ -105,6 +107,8 @@ const CanvasInner = forwardRef<CanvasHandle, CanvasProps>(({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const { screenToFlowPosition } = useReactFlow();
+  const viewport = useViewport();
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -361,7 +365,7 @@ const CanvasInner = forwardRef<CanvasHandle, CanvasProps>(({
   }), [completePendingConnection, cancelPendingConnection, getPendingConnection]);
 
   return (
-    <div className={`w6w-canvas ${className}`} style={{ height, width: '100%' }}>
+    <div ref={containerRef} className={`w6w-canvas ${className}`} style={{ height, width: '100%', position: 'relative' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -394,19 +398,10 @@ const CanvasInner = forwardRef<CanvasHandle, CanvasProps>(({
       )}
       {pendingConnection && (
         <div
+          className="pending-connection-indicator"
           style={{
-            position: 'absolute',
-            left: pendingConnection.position.x,
-            top: pendingConnection.position.y,
-            width: '10px',
-            height: '10px',
-            borderRadius: '50%',
-            backgroundColor: '#3b82f6',
-            border: '2px solid white',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            pointerEvents: 'none',
-            zIndex: 1000,
-            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            left: pendingConnection.position.x * viewport.zoom + viewport.x,
+            top: pendingConnection.position.y * viewport.zoom + viewport.y,
           }}
         />
       )}

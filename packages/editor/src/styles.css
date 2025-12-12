@@ -141,3 +141,29 @@
 .react-flow.dark .context-menu-item.destructive:hover {
   background-color: #7f1d1d;
 }
+
+/* Pending Connection Visual Indicator */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+}
+
+.pending-connection-indicator {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #3b82f6;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+  pointer-events: none;
+  z-index: 1000;
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  transform: translate(-50%, -50%);
+}
