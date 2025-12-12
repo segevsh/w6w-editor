@@ -4,7 +4,7 @@
  */
 
 export { WorkflowEditor } from './components/WorkflowEditor';
-export type { WorkflowEditorProps } from './components/WorkflowEditor';
+export type { WorkflowEditorProps, WorkflowEditorHandle } from './components/WorkflowEditor';
 
 export { Canvas } from './components/Canvas';
 export type { CanvasProps, CanvasHandle } from './components/Canvas';
