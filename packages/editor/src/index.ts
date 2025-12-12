@@ -7,7 +7,7 @@ export { WorkflowEditor } from './components/WorkflowEditor';
 export type { WorkflowEditorProps } from './components/WorkflowEditor';
 
 export { Canvas } from './components/Canvas';
-export type { CanvasProps } from './components/Canvas';
+export type { CanvasProps, CanvasHandle } from './components/Canvas';
 
 // Export workflow elements
 export { Rectangle, Node as WorkflowNode } from './components/elements';
@@ -18,4 +18,4 @@ export { ContextMenu } from './components/ui';
 export type { ContextMenuItem, ContextMenuProps } from './components/ui';
 
 // Export types
-export type { Workflow, Node, Edge } from './types';
+export type { Workflow, Node, Edge, PendingConnection, ContextMenuCallbacks } from './types';

@@ -1,4 +1,4 @@
-import { type FC, useCallback, useState } from 'react';
+import { useCallback, useState, useImperativeHandle, forwardRef } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -16,7 +16,28 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { ContextMenu, type ContextMenuItem } from './ui/ContextMenu';
-import type { ContextMenuCallbacks } from '../types';
+import type { ContextMenuCallbacks, PendingConnection } from '../types';
+
+/**
+ * Handle interface for Canvas component to expose imperative methods
+ */
+export interface CanvasHandle {
+  /**
+   * Complete a pending connection by creating a new node and edge
+   * @param nodeId - The ID to assign to the new node
+   * @param nodeType - The type of node to create
+   * @param nodeData - The data for the new node
+   */
+  completePendingConnection: (nodeId: string, nodeType: string, nodeData: Record<string, unknown>) => void;
+  /**
+   * Cancel the pending connection without creating a node
+   */
+  cancelPendingConnection: () => void;
+  /**
+   * Get the current pending connection state
+   */
+  getPendingConnection: () => PendingConnection | null;
+}
 
 export interface CanvasProps extends ContextMenuCallbacks {
   /**
@@ -65,7 +86,7 @@ export interface CanvasProps extends ContextMenuCallbacks {
 /**
  * Internal Canvas component that uses React Flow hooks
  */
-const CanvasInner: FC<CanvasProps> = ({
+const CanvasInner = forwardRef<CanvasHandle, CanvasProps>(({
   initialNodes = [],
   initialEdges = [],
   onChange,
@@ -80,7 +101,7 @@ const CanvasInner: FC<CanvasProps> = ({
   onNodeDuplicate,
   onNodeDelete,
   onConnectionDropped,
-}) => {
+}, ref) => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const { screenToFlowPosition } = useReactFlow();
@@ -90,6 +111,9 @@ const CanvasInner: FC<CanvasProps> = ({
     y: number;
     items: ContextMenuItem[];
   } | null>(null);
+
+  // State for pending connection (when user drags from a handle and drops on canvas)
+  const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
 
   // Handle context menu on pane (canvas background)
   const onPaneContextMenu = useCallback((event: any) => {
@@ -219,13 +243,15 @@ const CanvasInner: FC<CanvasProps> = ({
 
           const position = screenToFlowPosition({ x: clientX, y: clientY });
 
-          // If callback is provided, call it instead of creating node directly
+          // If callback is provided, call it and store pending connection state
           if (onConnectionDropped && connectionState.fromNode) {
-            onConnectionDropped({
+            const pendingConn: PendingConnection = {
               position,
               sourceNodeId: connectionState.fromNode.id,
               sourceHandle: connectionState.fromHandle?.id,
-            });
+            };
+            setPendingConnection(pendingConn);
+            onConnectionDropped(pendingConn);
           } else {
             // Fallback: create node directly for standalone usage
             const newNode: Node = {
@@ -279,6 +305,61 @@ const CanvasInner: FC<CanvasProps> = ({
     [onEdgesChange, onChange, nodes, edges]
   );
 
+  // Method to complete a pending connection by creating node and edge
+  const completePendingConnection = useCallback(
+    (nodeId: string, nodeType: string, nodeData: Record<string, unknown>) => {
+      if (!pendingConnection) {
+        console.warn('No pending connection to complete');
+        return;
+      }
+
+      // Create the new node at the pending connection position
+      const newNode: Node = {
+        id: nodeId,
+        type: nodeType,
+        position: pendingConnection.position,
+        data: nodeData,
+      };
+
+      const newNodes = [...nodes, newNode];
+      setNodes(newNodes);
+
+      // Create edge from source to new node
+      const newEdge = {
+        id: `e${pendingConnection.sourceNodeId}-${nodeId}`,
+        source: pendingConnection.sourceNodeId,
+        target: nodeId,
+        sourceHandle: pendingConnection.sourceHandle || null,
+      };
+      const newEdges = [...edges, newEdge];
+      setEdges(newEdges);
+
+      // Clear pending connection
+      setPendingConnection(null);
+
+      // Notify parent of changes
+      onChange?.(newNodes, newEdges);
+    },
+    [pendingConnection, nodes, edges, setNodes, setEdges, onChange]
+  );
+
+  // Method to cancel a pending connection without creating a node
+  const cancelPendingConnection = useCallback(() => {
+    setPendingConnection(null);
+  }, []);
+
+  // Method to get current pending connection
+  const getPendingConnection = useCallback(() => {
+    return pendingConnection;
+  }, [pendingConnection]);
+
+  // Expose methods via ref
+  useImperativeHandle(ref, () => ({
+    completePendingConnection,
+    cancelPendingConnection,
+    getPendingConnection,
+  }), [completePendingConnection, cancelPendingConnection, getPendingConnection]);
+
   return (
     <div className={`w6w-canvas ${className}`} style={{ height, width: '100%' }}>
       <ReactFlow
@@ -311,28 +392,57 @@ const CanvasInner: FC<CanvasProps> = ({
           onClose={() => setContextMenu(null)}
         />
       )}
+      {pendingConnection && (
+        <div
+          style={{
+            position: 'absolute',
+            left: pendingConnection.position.x,
+            top: pendingConnection.position.y,
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            backgroundColor: '#3b82f6',
+            border: '2px solid white',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            pointerEvents: 'none',
+            zIndex: 1000,
+            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          }}
+        />
+      )}
     </div>
   );
-};
+});
+
+CanvasInner.displayName = 'CanvasInner';
 
 /**
  * Canvas - A workflow canvas component powered by React Flow
  *
  * @example
  * ```tsx
+ * const canvasRef = useRef<CanvasHandle>(null);
+ *
  * <Canvas
+ *   ref={canvasRef}
  *   initialNodes={[
  *     { id: '1', position: { x: 0, y: 0 }, data: { label: 'Node 1' } }
  *   ]}
  *   initialEdges={[]}
  *   onChange={(nodes, edges) => console.log(nodes, edges)}
+ *   onConnectionDropped={(params) => {
+ *     // Show modal to select node type, then:
+ *     canvasRef.current?.completePendingConnection('new-id', 'custom', { label: 'New Node' });
+ *   }}
  * />
  * ```
  */
-export const Canvas: FC<CanvasProps> = (props) => {
+export const Canvas = forwardRef<CanvasHandle, CanvasProps>((props, ref) => {
   return (
     <ReactFlowProvider>
-      <CanvasInner {...props} />
+      <CanvasInner {...props} ref={ref} />
     </ReactFlowProvider>
   );
-};
+});
+
+Canvas.displayName = 'Canvas';

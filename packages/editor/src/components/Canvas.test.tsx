@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { ContextMenuCallbacks } from '../types';
+import type { ContextMenuCallbacks, PendingConnection } from '../types';
+import type { CanvasHandle } from './Canvas';
 
 // Unit tests for the callback functionality without rendering complexity
 describe('Canvas Context Menu Callbacks', () => {
@@ -182,6 +183,105 @@ describe('Canvas Context Menu Callbacks', () => {
       expect(callbacks.onNodeEdit).toBeDefined();
       expect(callbacks.onNodeDuplicate).toBeDefined();
       expect(callbacks.onNodeDelete).toBeDefined();
+    });
+  });
+
+  describe('Task 2.2: Pending Connection State', () => {
+    it('should define PendingConnection type correctly', () => {
+      const pendingConnection: PendingConnection = {
+        sourceNodeId: 'node-123',
+        sourceHandle: 'handle-a',
+        position: { x: 100, y: 200 },
+      };
+
+      expect(pendingConnection.sourceNodeId).toBe('node-123');
+      expect(pendingConnection.sourceHandle).toBe('handle-a');
+      expect(pendingConnection.position.x).toBe(100);
+      expect(pendingConnection.position.y).toBe(200);
+    });
+
+    it('should support PendingConnection without sourceHandle', () => {
+      const pendingConnection: PendingConnection = {
+        sourceNodeId: 'node-456',
+        position: { x: 150, y: 250 },
+      };
+
+      expect(pendingConnection.sourceNodeId).toBe('node-456');
+      expect(pendingConnection.sourceHandle).toBeUndefined();
+      expect(pendingConnection.position.x).toBe(150);
+      expect(pendingConnection.position.y).toBe(250);
+    });
+
+    it('should define CanvasHandle interface correctly', () => {
+      // Mock implementation of CanvasHandle
+      const mockHandle: CanvasHandle = {
+        completePendingConnection: vi.fn(),
+        cancelPendingConnection: vi.fn(),
+        getPendingConnection: vi.fn(),
+      };
+
+      expect(mockHandle.completePendingConnection).toBeDefined();
+      expect(mockHandle.cancelPendingConnection).toBeDefined();
+      expect(mockHandle.getPendingConnection).toBeDefined();
+    });
+
+    it('should call completePendingConnection with correct parameters', () => {
+      const mockHandle: CanvasHandle = {
+        completePendingConnection: vi.fn(),
+        cancelPendingConnection: vi.fn(),
+        getPendingConnection: vi.fn(),
+      };
+
+      mockHandle.completePendingConnection('new-node-123', 'custom', { label: 'New Node' });
+
+      expect(mockHandle.completePendingConnection).toHaveBeenCalledWith(
+        'new-node-123',
+        'custom',
+        { label: 'New Node' }
+      );
+    });
+
+    it('should call cancelPendingConnection without parameters', () => {
+      const mockHandle: CanvasHandle = {
+        completePendingConnection: vi.fn(),
+        cancelPendingConnection: vi.fn(),
+        getPendingConnection: vi.fn(),
+      };
+
+      mockHandle.cancelPendingConnection();
+
+      expect(mockHandle.cancelPendingConnection).toHaveBeenCalledWith();
+    });
+
+    it('should call getPendingConnection and return pending connection', () => {
+      const mockPending: PendingConnection = {
+        sourceNodeId: 'source-1',
+        sourceHandle: 'out',
+        position: { x: 50, y: 75 },
+      };
+
+      const mockHandle: CanvasHandle = {
+        completePendingConnection: vi.fn(),
+        cancelPendingConnection: vi.fn(),
+        getPendingConnection: vi.fn().mockReturnValue(mockPending),
+      };
+
+      const result = mockHandle.getPendingConnection();
+
+      expect(mockHandle.getPendingConnection).toHaveBeenCalledWith();
+      expect(result).toEqual(mockPending);
+    });
+
+    it('should return null when no pending connection', () => {
+      const mockHandle: CanvasHandle = {
+        completePendingConnection: vi.fn(),
+        cancelPendingConnection: vi.fn(),
+        getPendingConnection: vi.fn().mockReturnValue(null),
+      };
+
+      const result = mockHandle.getPendingConnection();
+
+      expect(result).toBeNull();
     });
   });
 });
