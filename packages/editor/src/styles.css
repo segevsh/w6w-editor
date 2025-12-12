@@ -118,3 +118,26 @@
 .context-menu-label {
   flex: 1;
 }
+
+/* Dark mode styles for context menu */
+.react-flow.dark .context-menu {
+  background: #1f2937;
+  border: 1px solid #374151;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.react-flow.dark .context-menu-item {
+  color: #e5e7eb;
+}
+
+.react-flow.dark .context-menu-item:hover {
+  background-color: #374151;
+}
+
+.react-flow.dark .context-menu-item.destructive {
+  color: #f87171;
+}
+
+.react-flow.dark .context-menu-item.destructive:hover {
+  background-color: #7f1d1d;
+}
