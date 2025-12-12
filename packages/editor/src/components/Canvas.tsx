@@ -79,6 +79,7 @@ const CanvasInner: FC<CanvasProps> = ({
   onNodeEdit,
   onNodeDuplicate,
   onNodeDelete,
+  onConnectionDropped,
 }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -205,7 +206,7 @@ const CanvasInner: FC<CanvasProps> = ({
 
   const onConnectEnd = useCallback(
     (event: MouseEvent | TouchEvent, connectionState: any) => {
-      // If connection didn't connect to a target node, create a new node
+      // If connection didn't connect to a target node, handle the dropped connection
       if (!connectionState.toNode) {
         const targetIsPane = (event.target as Element)?.classList.contains('react-flow__pane');
 
@@ -218,35 +219,44 @@ const CanvasInner: FC<CanvasProps> = ({
 
           const position = screenToFlowPosition({ x: clientX, y: clientY });
 
-          // Create new node at the drop position
-          const newNode: Node = {
-            id: `node-${Date.now()}`,
-            type: 'default',
-            position,
-            data: { label: 'New Node' },
-          };
-
-          const newNodes = [...nodes, newNode];
-          setNodes(newNodes);
-
-          // Create edge from source to new node
-          if (connectionState.fromNode) {
-            const newEdge = {
-              id: `e${connectionState.fromNode.id}-${newNode.id}`,
-              source: connectionState.fromNode.id,
-              target: newNode.id,
-              sourceHandle: connectionState.fromHandle?.id || null,
-            };
-            const newEdges = [...edges, newEdge];
-            setEdges(newEdges);
-            onChange?.(newNodes, newEdges);
+          // If callback is provided, call it instead of creating node directly
+          if (onConnectionDropped && connectionState.fromNode) {
+            onConnectionDropped({
+              position,
+              sourceNodeId: connectionState.fromNode.id,
+              sourceHandle: connectionState.fromHandle?.id,
+            });
           } else {
-            onChange?.(newNodes, edges);
+            // Fallback: create node directly for standalone usage
+            const newNode: Node = {
+              id: `node-${Date.now()}`,
+              type: 'default',
+              position,
+              data: { label: 'New Node' },
+            };
+
+            const newNodes = [...nodes, newNode];
+            setNodes(newNodes);
+
+            // Create edge from source to new node
+            if (connectionState.fromNode) {
+              const newEdge = {
+                id: `e${connectionState.fromNode.id}-${newNode.id}`,
+                source: connectionState.fromNode.id,
+                target: newNode.id,
+                sourceHandle: connectionState.fromHandle?.id || null,
+              };
+              const newEdges = [...edges, newEdge];
+              setEdges(newEdges);
+              onChange?.(newNodes, newEdges);
+            } else {
+              onChange?.(newNodes, edges);
+            }
           }
         }
       }
     },
-    [screenToFlowPosition, nodes, edges, setNodes, setEdges, onChange]
+    [screenToFlowPosition, nodes, edges, setNodes, setEdges, onChange, onConnectionDropped]
   );
 
   const handleNodesChange = useCallback(

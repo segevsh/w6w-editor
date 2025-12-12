@@ -26,6 +26,15 @@ export interface Workflow {
 }
 
 /**
+ * Pending connection state for drag-to-add node functionality
+ */
+export interface PendingConnection {
+  sourceNodeId: string;
+  sourceHandle?: string;
+  position: { x: number; y: number };
+}
+
+/**
  * Context menu callback handlers
  */
 export interface ContextMenuCallbacks {
@@ -45,4 +54,13 @@ export interface ContextMenuCallbacks {
    * Called when user requests to delete a node
    */
   onNodeDelete?: (nodeId: string) => void;
+  /**
+   * Called when a connection is dropped without connecting to an existing node
+   * This allows the web app to show an "Add Node" modal and then create the node and edge
+   */
+  onConnectionDropped?: (params: {
+    position: { x: number; y: number };
+    sourceNodeId: string;
+    sourceHandle?: string;
+  }) => void;
 }

@@ -107,4 +107,81 @@ describe('Canvas Context Menu Callbacks', () => {
       expect(props.onNodeDelete).toBeDefined();
     });
   });
+
+  describe('Task 2.1: Connection Dropped Callback', () => {
+    it('should define onConnectionDropped callback type correctly', () => {
+      const mockCallback: ContextMenuCallbacks['onConnectionDropped'] = vi.fn();
+
+      // Call with expected parameters
+      mockCallback?.({
+        position: { x: 100, y: 200 },
+        sourceNodeId: 'node-123',
+        sourceHandle: 'handle-a',
+      });
+
+      expect(mockCallback).toHaveBeenCalledWith({
+        position: { x: 100, y: 200 },
+        sourceNodeId: 'node-123',
+        sourceHandle: 'handle-a',
+      });
+    });
+
+    it('should support onConnectionDropped without sourceHandle', () => {
+      const mockCallback: ContextMenuCallbacks['onConnectionDropped'] = vi.fn();
+
+      // Call without sourceHandle
+      mockCallback?.({
+        position: { x: 150, y: 250 },
+        sourceNodeId: 'node-456',
+      });
+
+      expect(mockCallback).toHaveBeenCalledWith({
+        position: { x: 150, y: 250 },
+        sourceNodeId: 'node-456',
+      });
+    });
+
+    it('should be optional in ContextMenuCallbacks interface', () => {
+      // Should be valid without onConnectionDropped
+      const callbacks: ContextMenuCallbacks = {
+        onAddNodeRequest: vi.fn(),
+      };
+      expect(callbacks.onConnectionDropped).toBeUndefined();
+
+      // Should be valid with onConnectionDropped
+      const callbacksWithConnection: ContextMenuCallbacks = {
+        onConnectionDropped: vi.fn(),
+      };
+      expect(callbacksWithConnection.onConnectionDropped).toBeDefined();
+    });
+
+    it('should work with all callbacks together', () => {
+      const callbacks: ContextMenuCallbacks = {
+        onAddNodeRequest: vi.fn(),
+        onNodeEdit: vi.fn(),
+        onNodeDuplicate: vi.fn(),
+        onNodeDelete: vi.fn(),
+        onConnectionDropped: vi.fn(),
+      };
+
+      // Test onConnectionDropped
+      callbacks.onConnectionDropped?.({
+        position: { x: 50, y: 75 },
+        sourceNodeId: 'source-node',
+        sourceHandle: 'output-1',
+      });
+
+      expect(callbacks.onConnectionDropped).toHaveBeenCalledWith({
+        position: { x: 50, y: 75 },
+        sourceNodeId: 'source-node',
+        sourceHandle: 'output-1',
+      });
+
+      // Verify other callbacks are still available
+      expect(callbacks.onAddNodeRequest).toBeDefined();
+      expect(callbacks.onNodeEdit).toBeDefined();
+      expect(callbacks.onNodeDuplicate).toBeDefined();
+      expect(callbacks.onNodeDelete).toBeDefined();
+    });
+  });
 });
