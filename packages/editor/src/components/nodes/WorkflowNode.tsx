@@ -154,8 +154,11 @@ export const WorkflowNode: FC<XYNodeProps<WorkflowNodeType>> = memo(({ id, data,
           className="add-node-button add-node-button-left"
           onClick={(e) => {
             e.stopPropagation();
+            e.preventDefault();
+            console.log('Add node button clicked (left/target)', id);
             data.onAddNode?.(id, 'target');
           }}
+          onMouseDown={(e) => e.stopPropagation()}
           title="Add node before"
           aria-label="Add node before"
         >
@@ -169,8 +172,11 @@ export const WorkflowNode: FC<XYNodeProps<WorkflowNodeType>> = memo(({ id, data,
           className="add-node-button add-node-button-right"
           onClick={(e) => {
             e.stopPropagation();
+            e.preventDefault();
+            console.log('Add node button clicked (right/source)', id);
             data.onAddNode?.(id, 'source');
           }}
+          onMouseDown={(e) => e.stopPropagation()}
           title="Add node after"
           aria-label="Add node after"
         >

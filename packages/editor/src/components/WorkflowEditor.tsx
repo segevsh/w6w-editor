@@ -1,4 +1,4 @@
-import { useCallback, useState, forwardRef, useImperativeHandle, useMemo, useEffect } from 'react';
+import { useCallback, useState, forwardRef, useImperativeHandle, useMemo, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -15,6 +15,7 @@ import {
   type NodeTypes,
   type Node,
   type Edge,
+  SelectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { Workflow, ContextMenuCallbacks, PendingConnection } from '../types';
@@ -46,6 +47,20 @@ export interface WorkflowEditorHandle {
    * Auto-arrange nodes in a horizontal layout
    */
   autoArrange: () => void;
+  /**
+   * Add a new node at the specified position
+   */
+  addNode: (nodeId: string, nodeType: string, position: { x: number; y: number }, nodeData: Record<string, unknown>) => void;
+  /**
+   * Add a new node and connect it to an existing node
+   */
+  addNodeWithEdge: (
+    nodeId: string,
+    nodeType: string,
+    position: { x: number; y: number },
+    nodeData: Record<string, unknown>,
+    connection: { sourceNodeId: string; sourceHandle?: string } | { targetNodeId: string; targetHandle?: string }
+  ) => void;
 }
 
 export interface WorkflowEditorProps extends ContextMenuCallbacks {
@@ -131,6 +146,14 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
 }, ref) => {
   const isDark = colorMode === 'dark' || (colorMode === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
+  // Story 03: Track modifier key state for pan/zoom mode
+  const [isModifierPressed, setIsModifierPressed] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Story 05: Track interaction state to prevent mid-interaction mode changes
+  const [isInteracting, setIsInteracting] = useState(false);
+  const lockedModifierStateRef = useRef(false);
+
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -160,13 +183,25 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
     return status;
   }, [nodes, edges]);
 
+  // Internal delete handler that actually removes the node
+  const handleInternalDelete = useCallback((nodeId: string) => {
+    const newNodes = nodes.filter((n) => n.id !== nodeId);
+    const newEdges = edges.filter(
+      (e) => e.source !== nodeId && e.target !== nodeId
+    );
+    setNodes(newNodes);
+    setEdges(newEdges);
+    onChange?.({ nodes: newNodes, edges: newEdges });
+    onNodeDelete?.(nodeId);
+  }, [nodes, edges, setNodes, setEdges, onChange, onNodeDelete]);
+
   // Enrich nodes with callbacks and connection status
   const enrichedNodes = useMemo(() => {
     return nodes.map((node: Node) => ({
       ...node,
       data: {
         ...node.data,
-        onDelete: onNodeDelete,
+        onDelete: handleInternalDelete,
         onEdit: onNodeEdit,
         onDuplicate: onNodeDuplicate,
         onAddNode: onAddNodeFromHandle,
@@ -174,7 +209,7 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
         hasOutputConnection: nodeConnectionStatus[node.id]?.hasOutput ?? false,
       },
     }));
-  }, [nodes, nodeConnectionStatus, onNodeDelete, onNodeEdit, onNodeDuplicate, onAddNodeFromHandle]);
+  }, [nodes, nodeConnectionStatus, handleInternalDelete, onNodeEdit, onNodeDuplicate, onAddNodeFromHandle]);
   const { screenToFlowPosition } = useReactFlow();
   const viewport = useViewport();
 
@@ -374,6 +409,19 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
     setContextMenu(null);
   }, []);
 
+  // Story 05: Track selection start to lock mode during interaction
+  const onSelectionStart = useCallback(() => {
+    setIsInteracting(true);
+    lockedModifierStateRef.current = isModifierPressed;
+  }, [isModifierPressed]);
+
+  const onSelectionEnd = useCallback(() => {
+    setIsInteracting(false);
+  }, []);
+
+  // Story 05: Use locked modifier state during interactions
+  const effectiveModifierPressed = isInteracting ? lockedModifierStateRef.current : isModifierPressed;
+
   // Method to complete a pending connection by creating node and edge
   const completePendingConnection = useCallback(
     (nodeId: string, nodeType: string, nodeData: Record<string, unknown>) => {
@@ -539,6 +587,108 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
     onChange?.({ nodes: newNodes, edges });
   }, [nodes, edges, setNodes, onChange]);
 
+  // Method to add a new node at a specific position
+  const addNode = useCallback(
+    (nodeId: string, nodeType: string, position: { x: number; y: number }, nodeData: Record<string, unknown>) => {
+      const newNode: Node = {
+        id: nodeId,
+        type: nodeType,
+        position,
+        data: nodeData,
+      };
+
+      const newNodes = [...nodes, newNode];
+      setNodes(newNodes);
+      onChange?.({ nodes: newNodes, edges });
+    },
+    [nodes, edges, setNodes, onChange]
+  );
+
+  // Method to add a new node with an edge connection
+  const addNodeWithEdge = useCallback(
+    (
+      nodeId: string,
+      nodeType: string,
+      position: { x: number; y: number },
+      nodeData: Record<string, unknown>,
+      connection: { sourceNodeId: string; sourceHandle?: string } | { targetNodeId: string; targetHandle?: string }
+    ) => {
+      console.log('[Editor] addNodeWithEdge called:', { nodeId, nodeType, position, nodeData, connection });
+
+      const newNode: Node = {
+        id: nodeId,
+        type: nodeType,
+        position,
+        data: nodeData,
+      };
+
+      // Create the edge based on connection type
+      const isSourceConnection = 'sourceNodeId' in connection;
+      const newEdge: Edge = {
+        id: `edge-${Date.now()}`,
+        source: isSourceConnection ? (connection as { sourceNodeId: string }).sourceNodeId : nodeId,
+        target: isSourceConnection ? nodeId : (connection as { targetNodeId: string }).targetNodeId,
+        sourceHandle: isSourceConnection ? (connection as { sourceNodeId: string; sourceHandle?: string }).sourceHandle : undefined,
+        targetHandle: !isSourceConnection ? (connection as { targetNodeId: string; targetHandle?: string }).targetHandle : undefined,
+      };
+
+      console.log('[Editor] Creating edge:', newEdge);
+
+      const newNodes = [...nodes, newNode];
+      const newEdges = [...edges, newEdge];
+      console.log('[Editor] New state - nodes:', newNodes.length, 'edges:', newEdges.length);
+      setNodes(newNodes);
+      setEdges(newEdges);
+      onChange?.({ nodes: newNodes, edges: newEdges });
+    },
+    [nodes, edges, setNodes, setEdges, onChange]
+  );
+
+  // Story 03: Track modifier key state (Cmd/Ctrl)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey) {
+        setIsModifierPressed(true);
+      }
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (!event.metaKey && !event.ctrlKey) {
+        setIsModifierPressed(false);
+      }
+    };
+
+    // Reset state when window loses focus
+    const handleBlur = () => {
+      setIsModifierPressed(false);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
+
+  // Story 03: Prevent browser default Cmd+scroll zoom
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (e.metaKey || e.ctrlKey) {
+        e.preventDefault();
+      }
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('wheel', handleWheel, { passive: false });
+      return () => container.removeEventListener('wheel', handleWheel);
+    }
+  }, []);
+
   // Keyboard shortcut for save (Cmd+S / Ctrl+S)
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -564,10 +714,16 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
     getPendingConnection,
     getWorkflow,
     autoArrange,
-  }), [completePendingConnection, cancelPendingConnection, getPendingConnection, getWorkflow, autoArrange]);
+    addNode,
+    addNodeWithEdge,
+  }), [completePendingConnection, cancelPendingConnection, getPendingConnection, getWorkflow, autoArrange, addNode, addNodeWithEdge]);
 
   return (
-    <div className={`w6w-editor ${className}`} style={{ height, width: '100%', position: 'relative' }}>
+    <div
+      ref={containerRef}
+      className={`w6w-editor ${className} ${isModifierPressed ? 'pan-mode' : 'selection-mode'}`}
+      style={{ height, width: '100%', position: 'relative' }}
+    >
       <ReactFlow
         nodes={enrichedNodes}
         edges={edges}
@@ -580,8 +736,19 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
         onNodeContextMenu={onNodeContextMenu}
         onEdgeContextMenu={onEdgeContextMenu}
         onPaneClick={onPaneClick}
+        // Story 01 & 03 & 05: Make drag-to-select default, switch to pan when modifier pressed
+        panOnDrag={effectiveModifierPressed}
+        selectionOnDrag={!effectiveModifierPressed}
+        selectionMode={SelectionMode.Partial}
+        selectNodesOnDrag={!effectiveModifierPressed}
         selectionKeyCode={null}
-        selectNodesOnDrag={false}
+        onSelectionStart={onSelectionStart}
+        onSelectionEnd={onSelectionEnd}
+        // Story 02 & 03 & 05: Change scroll to pan Y-axis, switch to zoom when modifier pressed
+        zoomOnScroll={effectiveModifierPressed}
+        panOnScroll={!effectiveModifierPressed}
+        // Keep zoom on pinch for touch devices
+        zoomOnPinch={true}
         deleteKeyCode={['Backspace', 'Delete']}
         fitView
         colorMode={colorMode}
@@ -644,6 +811,24 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
           items={contextMenu.items}
           onClose={() => setContextMenu(null)}
         />
+      )}
+      {/* Story 04: Visual feedback for pan mode */}
+      {isModifierPressed && (
+        <div className="mode-indicator">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M9 11V6l5 5-5 5v-5H3M15 12h6M20 7l3 5-3 5" />
+          </svg>
+          <span className="mode-indicator-text">Pan &amp; Zoom Mode</span>
+        </div>
       )}
     </div>
   );
