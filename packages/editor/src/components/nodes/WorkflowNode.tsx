@@ -1,5 +1,6 @@
-import { type FC, memo, useMemo } from 'react';
+import { type FC, memo, useMemo, type ReactNode } from 'react';
 import { Handle, Position, type NodeProps as XYNodeProps, type Node } from '@xyflow/react';
+import { AppLabel } from '../ui/AppLabel';
 import { NodeActionToolbar } from '../ui/NodeActionToolbar';
 
 export type WorkflowNodeData = {
@@ -7,6 +8,9 @@ export type WorkflowNodeData = {
   nodeType?: string;
   package?: string;
   app?: string;
+  appName?: string;
+  appIcon?: ReactNode | string;
+  appVersion?: string;
   action?: string;
   config?: Record<string, unknown>;
   disabled?: boolean;
@@ -89,13 +93,15 @@ export const WorkflowNode: FC<XYNodeProps<WorkflowNodeType>> = memo(({ id, data,
         padding: '10px 20px',
         borderRadius: '8px',
         background: getNodeColor(),
-        border: selected ? '2px solid #1a192b' : '1px solid #ccc',
+        border: 'none',
         minWidth: '120px',
         minHeight: `${Math.max(40, Math.max(inputs.length, outputs.length) * 25)}px`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: selected ? '0 2px 8px rgba(0,0,0,0.2)' : '0 1px 4px rgba(0,0,0,0.1)',
+        boxShadow: selected
+          ? '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1)'
+          : '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)',
         opacity: data.disabled ? 0.5 : 1,
       }}
     >
@@ -122,16 +128,35 @@ export const WorkflowNode: FC<XYNodeProps<WorkflowNodeType>> = memo(({ id, data,
         />
       ))}
 
-      {/* Node label */}
+      {/* Node content */}
       <div
         style={{
-          fontSize: '12px',
-          fontWeight: 500,
-          textAlign: 'center',
-          color: '#333',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '4px',
         }}
       >
-        {data.label || 'Node'}
+        {/* App label (first row) */}
+        {data.appName && (
+          <AppLabel
+            icon={data.appIcon}
+            name={data.appName}
+            version={data.appVersion}
+            fontSize={9}
+          />
+        )}
+        {/* Node label (second row) */}
+        <div
+          style={{
+            fontSize: '12px',
+            fontWeight: 500,
+            textAlign: 'center',
+            color: '#333',
+          }}
+        >
+          {data.label || 'Node'}
+        </div>
       </div>
 
       {/* Output handles (right side) */}
