@@ -16,16 +16,21 @@ const GmailIcon = () => (
   </svg>
 );
 
-const WebhookIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" width="100%" height="100%">
-    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+const GitHubIcon = () => (
+  <svg viewBox="0 0 24 24" fill="#333" width="100%" height="100%">
+    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
   </svg>
 );
 
-const HttpIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" width="100%" height="100%">
-    <circle cx="12" cy="12" r="10" />
-    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+const StripeIcon = () => (
+  <svg viewBox="0 0 24 24" fill="#635BFF" width="100%" height="100%">
+    <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z" />
+  </svg>
+);
+
+const WebhookIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" width="100%" height="100%">
+    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
   </svg>
 );
 
@@ -79,21 +84,13 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * Basic node without app label - backward compatible
+ * Slack - Send Message
+ *
+ * Primary example showing the node structure:
+ * - First row: App label with icon (Slack)
+ * - Second row: Action label (Send Message)
  */
-export const BasicNode: Story = {
-  args: {
-    data: {
-      label: 'My Node',
-      nodeType: 'action',
-    },
-  },
-};
-
-/**
- * Node with app label showing icon and app name
- */
-export const WithAppLabel: Story = {
+export const SlackSendMessage: Story = {
   args: {
     data: {
       label: 'Send Message',
@@ -105,9 +102,75 @@ export const WithAppLabel: Story = {
 };
 
 /**
- * Trigger node with app label
+ * Gmail - Send Email
+ *
+ * Email action with Gmail app label
  */
-export const TriggerWithAppLabel: Story = {
+export const GmailSendEmail: Story = {
+  args: {
+    data: {
+      label: 'Send Email',
+      nodeType: 'action',
+      appName: 'Gmail',
+      appIcon: <GmailIcon />,
+    },
+  },
+};
+
+/**
+ * GitHub - Create Issue
+ *
+ * GitHub integration action
+ */
+export const GitHubCreateIssue: Story = {
+  args: {
+    data: {
+      label: 'Create Issue',
+      nodeType: 'action',
+      appName: 'GitHub',
+      appIcon: <GitHubIcon />,
+    },
+  },
+};
+
+/**
+ * Stripe - Create Payment
+ *
+ * Payment processing action
+ */
+export const StripeCreatePayment: Story = {
+  args: {
+    data: {
+      label: 'Create Payment',
+      nodeType: 'action',
+      appName: 'Stripe',
+      appIcon: <StripeIcon />,
+    },
+  },
+};
+
+/**
+ * Webhook - Incoming Request (Trigger)
+ *
+ * Trigger node example with app label
+ */
+export const WebhookTrigger: Story = {
+  args: {
+    data: {
+      label: 'Incoming Request',
+      nodeType: 'trigger',
+      appName: 'Webhook',
+      appIcon: <WebhookIcon />,
+    },
+  },
+};
+
+/**
+ * Gmail - New Email (Trigger)
+ *
+ * Email trigger with Gmail app label
+ */
+export const GmailNewEmail: Story = {
   args: {
     data: {
       label: 'New Email',
@@ -119,79 +182,28 @@ export const TriggerWithAppLabel: Story = {
 };
 
 /**
- * Webhook trigger node
+ * Basic node without app label
+ *
+ * Backward compatible - nodes without app info still work
  */
-export const WebhookTrigger: Story = {
+export const BasicNodeWithoutAppLabel: Story = {
   args: {
     data: {
-      label: 'Incoming Webhook',
-      nodeType: 'trigger',
-      appName: 'Webhook',
-      appIcon: <WebhookIcon />,
-    },
-  },
-};
-
-/**
- * HTTP request action node
- */
-export const HttpAction: Story = {
-  args: {
-    data: {
-      label: 'GET /api/users',
+      label: 'My Node',
       nodeType: 'action',
-      appName: 'HTTP',
-      appIcon: <HttpIcon />,
     },
   },
 };
 
 /**
- * Condition node with app label
- */
-export const ConditionNode: Story = {
-  args: {
-    data: {
-      label: 'Check Status',
-      nodeType: 'condition',
-      appName: 'Logic',
-    },
-  },
-};
-
-/**
- * Transform node with app label
- */
-export const TransformNode: Story = {
-  args: {
-    data: {
-      label: 'Format Data',
-      nodeType: 'transform',
-      appName: 'Transform',
-    },
-  },
-};
-
-/**
- * Loop node with app label
- */
-export const LoopNode: Story = {
-  args: {
-    data: {
-      label: 'For Each Item',
-      nodeType: 'loop',
-      appName: 'Loop',
-    },
-  },
-};
-
-/**
- * Selected node state
+ * Selected state
+ *
+ * Node with selection highlight and stronger shadow
  */
 export const SelectedNode: Story = {
   args: {
     data: {
-      label: 'Send Notification',
+      label: 'Send Message',
       nodeType: 'action',
       appName: 'Slack',
       appIcon: <SlackIcon />,
@@ -201,12 +213,14 @@ export const SelectedNode: Story = {
 };
 
 /**
- * Disabled node state
+ * Disabled state
+ *
+ * Node with reduced opacity when disabled
  */
 export const DisabledNode: Story = {
   args: {
     data: {
-      label: 'Disabled Step',
+      label: 'Send Message',
       nodeType: 'action',
       appName: 'Slack',
       appIcon: <SlackIcon />,
@@ -216,12 +230,14 @@ export const DisabledNode: Story = {
 };
 
 /**
- * Node with multiple input/output handles
+ * Multiple handles
+ *
+ * Condition node with multiple input/output handles
  */
 export const MultipleHandles: Story = {
   args: {
     data: {
-      label: 'Router',
+      label: 'Route by Status',
       nodeType: 'condition',
       appName: 'Logic',
       input: ['in1', 'in2'],
@@ -231,47 +247,9 @@ export const MultipleHandles: Story = {
 };
 
 /**
- * Comparison of nodes with and without app labels
- */
-export const ComparisonWithWithoutAppLabel: Story = {
-  args: {
-    data: {
-      label: 'Send Message',
-      nodeType: 'action',
-    },
-  },
-  render: () => (
-    <div style={{ display: 'flex', gap: '24px' }}>
-      <div>
-        <p style={{ fontSize: '12px', color: '#666', marginBottom: '8px', textAlign: 'center' }}>
-          Without App Label
-        </p>
-        <WorkflowNodeWrapper
-          data={{
-            label: 'Send Message',
-            nodeType: 'action',
-          }}
-        />
-      </div>
-      <div>
-        <p style={{ fontSize: '12px', color: '#666', marginBottom: '8px', textAlign: 'center' }}>
-          With App Label
-        </p>
-        <WorkflowNodeWrapper
-          data={{
-            label: 'Send Message',
-            nodeType: 'action',
-            appName: 'Slack',
-            appIcon: <SlackIcon />,
-          }}
-        />
-      </div>
-    </div>
-  ),
-};
-
-/**
- * All node types with app labels
+ * All node types gallery
+ *
+ * Shows all node types with app labels
  */
 export const AllNodeTypes: Story = {
   args: {
@@ -281,38 +259,68 @@ export const AllNodeTypes: Story = {
     },
   },
   render: () => {
-    const nodeConfigs: { data: WorkflowNodeData; label: string }[] = [
+    const nodeConfigs: { title: string; data: WorkflowNodeData }[] = [
       {
-        label: 'Trigger',
+        title: 'Trigger',
         data: { label: 'New Email', nodeType: 'trigger', appName: 'Gmail', appIcon: <GmailIcon /> },
       },
       {
-        label: 'Action',
+        title: 'Action',
         data: { label: 'Send Message', nodeType: 'action', appName: 'Slack', appIcon: <SlackIcon /> },
       },
       {
-        label: 'Condition',
+        title: 'Condition',
         data: { label: 'Check Status', nodeType: 'condition', appName: 'Logic' },
       },
       {
-        label: 'Transform',
+        title: 'Transform',
         data: { label: 'Format Data', nodeType: 'transform', appName: 'Transform' },
       },
       {
-        label: 'Loop',
-        data: { label: 'For Each', nodeType: 'loop', appName: 'Loop' },
+        title: 'Loop',
+        data: { label: 'For Each Item', nodeType: 'loop', appName: 'Loop' },
       },
     ];
 
     return (
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
         {nodeConfigs.map((config) => (
-          <div key={config.label}>
+          <div key={config.title}>
             <p style={{ fontSize: '12px', color: '#666', marginBottom: '8px', textAlign: 'center' }}>
-              {config.label}
+              {config.title}
             </p>
             <WorkflowNodeWrapper data={config.data} />
           </div>
+        ))}
+      </div>
+    );
+  },
+};
+
+/**
+ * Common integrations gallery
+ *
+ * Shows popular app integrations with their actions
+ */
+export const CommonIntegrations: Story = {
+  args: {
+    data: {
+      label: 'Node',
+      nodeType: 'action',
+    },
+  },
+  render: () => {
+    const integrations: { data: WorkflowNodeData }[] = [
+      { data: { label: 'Send Message', nodeType: 'action', appName: 'Slack', appIcon: <SlackIcon /> } },
+      { data: { label: 'Send Email', nodeType: 'action', appName: 'Gmail', appIcon: <GmailIcon /> } },
+      { data: { label: 'Create Issue', nodeType: 'action', appName: 'GitHub', appIcon: <GitHubIcon /> } },
+      { data: { label: 'Create Payment', nodeType: 'action', appName: 'Stripe', appIcon: <StripeIcon /> } },
+    ];
+
+    return (
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+        {integrations.map((config, index) => (
+          <WorkflowNodeWrapper key={index} data={config.data} />
         ))}
       </div>
     );

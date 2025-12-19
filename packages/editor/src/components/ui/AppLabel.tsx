@@ -62,26 +62,58 @@ export const AppLabel: FC<AppLabelProps> = memo(({
     );
   };
 
+  const padding = fontSize * 0.35;
+
   return (
     <div
       className={`app-label ${className}`}
       style={{
-        display: 'flex',
+        display: 'inline-flex',
         alignItems: 'center',
-        gap: fontSize * 0.4,
         fontSize: `${fontSize}px`,
         color: '#666',
         fontWeight: 400,
+        border: '1px solid rgba(0, 0, 0, 0.1)',
+        borderRadius: fontSize * 0.3,
+        overflow: 'hidden',
       }}
     >
-      {renderIcon()}
-      <span className="app-label-name">{name}</span>
+      {icon && (
+        <>
+          <span
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: padding,
+            }}
+          >
+            {renderIcon()}
+          </span>
+          <span
+            style={{
+              width: '1px',
+              alignSelf: 'stretch',
+              backgroundColor: 'rgba(0, 0, 0, 0.1)',
+            }}
+          />
+        </>
+      )}
+      <span
+        className="app-label-name"
+        style={{
+          padding: `${padding}px ${padding * 1.5}px`,
+        }}
+      >
+        {name}
+      </span>
       {showVersion && version && (
         <span
           className="app-label-version"
           style={{
             opacity: 0.7,
             fontSize: `${fontSize * 0.85}px`,
+            paddingRight: padding * 1.5,
           }}
         >
           v{version}
