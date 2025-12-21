@@ -13,7 +13,11 @@
     "dev": "pnpm -r dev",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
-    "clean": "pnpm -r clean"
+    "clean": "pnpm -r clean",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "check": "biome check --write .",
+    "check:ci": "biome check ."
   },
   "keywords": [
     "workflow",
@@ -34,6 +38,7 @@
   },
   "homepage": "https://github.com/w6w-io/editor#readme",
   "devDependencies": {
+    "@biomejs/biome": "^2.3.10",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
