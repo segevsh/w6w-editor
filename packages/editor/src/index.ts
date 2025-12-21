@@ -19,3 +19,13 @@ export type { ContextMenuItem, ContextMenuProps } from './components/ui';
 
 // Export types
 export type { Workflow, Node, Edge, PendingConnection, ContextMenuCallbacks } from './types';
+
+// Export node types - coupled with schema
+export type {
+  WorkflowNodeData,
+  WorkflowNodeType,
+  SchemaNodeFields,
+  EditorNodeFields,
+  NodeType,
+} from './types';
+export { NODE_TYPES, isValidNodeType, getNodeType } from './types';

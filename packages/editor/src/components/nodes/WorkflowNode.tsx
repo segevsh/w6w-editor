@@ -1,32 +1,12 @@
-import { type FC, memo, useMemo, type ReactNode } from 'react';
-import { Handle, Position, type NodeProps as XYNodeProps, type Node } from '@xyflow/react';
+import { type FC, memo, useMemo } from 'react';
+import { Handle, Position, type NodeProps as XYNodeProps } from '@xyflow/react';
 import { AppLabel } from '../ui/AppLabel';
 import { NodeActionToolbar } from '../ui/NodeActionToolbar';
+import type { WorkflowNodeData, WorkflowNodeType } from '../../types/node';
+import { getNodeType } from '../../types/node';
 
-export type WorkflowNodeData = {
-  label?: string;
-  nodeType?: string;
-  package?: string;
-  app?: string;
-  appName?: string;
-  appIcon?: ReactNode | string;
-  appVersion?: string;
-  action?: string;
-  config?: Record<string, unknown>;
-  disabled?: boolean;
-  notes?: string;
-  input?: string[];
-  output?: string[];
-  onDelete?: (nodeId: string) => void;
-  onEdit?: (nodeId: string) => void;
-  onDuplicate?: (nodeId: string) => void;
-  onAddNode?: (nodeId: string, handleType: 'source' | 'target', handleId?: string) => void;
-  hasInputConnection?: boolean;
-  hasOutputConnection?: boolean;
-  [key: string]: unknown;
-};
-
-export type WorkflowNodeType = Node<WorkflowNodeData, 'workflow'>;
+// Re-export types for public API consumers
+export type { WorkflowNodeData, WorkflowNodeType };
 
 const handleStyle = {
   background: '#555',
@@ -69,7 +49,8 @@ export const WorkflowNode: FC<XYNodeProps<WorkflowNodeType>> = memo(({ id, data,
 
   // Get background color based on node type
   const getNodeColor = () => {
-    switch (data.nodeType) {
+    const nodeType = getNodeType(data);
+    switch (nodeType) {
       case 'trigger':
         return '#e3f2fd';
       case 'condition':
@@ -97,8 +78,8 @@ export const WorkflowNode: FC<XYNodeProps<WorkflowNodeType>> = memo(({ id, data,
         minWidth: '120px',
         minHeight: `${Math.max(40, Math.max(inputs.length, outputs.length) * 25)}px`,
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: 'start',
+        justifyContent: 'left',
         boxShadow: selected
           ? '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1)'
           : '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)',
@@ -133,7 +114,7 @@ export const WorkflowNode: FC<XYNodeProps<WorkflowNodeType>> = memo(({ id, data,
         style={{
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
+          alignItems: 'start',
           gap: '4px',
         }}
       >
@@ -143,7 +124,7 @@ export const WorkflowNode: FC<XYNodeProps<WorkflowNodeType>> = memo(({ id, data,
             icon={data.appIcon}
             name={data.appName}
             version={data.appVersion}
-            fontSize={9}
+            fontSize={8}
           />
         )}
         {/* Node label (second row) */}

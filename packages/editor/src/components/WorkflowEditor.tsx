@@ -15,8 +15,8 @@ import {
   type EdgeChange,
   Panel,
   type NodeTypes,
-  type Node,
-  type Edge,
+  type Node as RFNode,
+  type Edge as RFEdge,
   SelectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -24,6 +24,11 @@ import type { Workflow, ContextMenuCallbacks, PendingConnection } from '../types
 import { WorkflowNode } from './nodes/WorkflowNode';
 import { ContextMenu, type ContextMenuItem } from './ui/ContextMenu';
 import { useWorkflowHistory } from '../hooks/useWorkflowHistory';
+import {
+  schemaWorkflowToReactFlow,
+  type ReactFlowNode,
+  type ReactFlowEdge,
+} from '../utils/transformWorkflow';
 import '../styles.css';
 
 /**
@@ -44,8 +49,9 @@ export interface WorkflowEditorHandle {
   getPendingConnection: () => PendingConnection | null;
   /**
    * Get the current workflow state (nodes and edges with current positions)
+   * Returns React Flow format to match database storage format
    */
-  getWorkflow: () => Workflow;
+  getWorkflow: () => { nodes: ReactFlowNode[]; edges: ReactFlowEdge[] };
   /**
    * Auto-arrange nodes in a horizontal layout
    */
@@ -84,7 +90,10 @@ export interface WorkflowEditorHandle {
 
 export interface WorkflowEditorProps extends ContextMenuCallbacks {
   initialWorkflow?: Workflow;
-  onChange?: (workflow: Workflow) => void;
+  /**
+   * Callback when the workflow changes. Receives nodes and edges in React Flow format.
+   */
+  onChange?: (changes: { nodes: ReactFlowNode[]; edges: ReactFlowEdge[] }) => void;
   className?: string;
   /**
    * Height of the editor canvas
@@ -133,9 +142,9 @@ export interface WorkflowEditorProps extends ContextMenuCallbacks {
   onAddNodeFromHandle?: (nodeId: string, handleType: 'source' | 'target', handleId?: string) => void;
   /**
    * Callback when user triggers save (Cmd+S / Ctrl+S)
-   * The callback receives the current workflow state
+   * The callback receives the current workflow state in React Flow format.
    */
-  onSave?: (workflow: Workflow) => void;
+  onSave?: (changes: { nodes: ReactFlowNode[]; edges: ReactFlowEdge[] }) => void;
 }
 
 // Define custom node types outside component to prevent re-renders
@@ -147,7 +156,7 @@ const nodeTypes: NodeTypes = {
  * Internal WorkflowEditor component that uses React Flow hooks
  */
 const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps>(({
-  initialWorkflow = { nodes: [], edges: [] },
+  initialWorkflow,
   onChange,
   className = '',
   height = '600px',
@@ -164,6 +173,14 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
   onSave,
 }, ref) => {
   const isDark = colorMode === 'dark' || (colorMode === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  // Transform schema workflow to React Flow format for internal use
+  const initialRFWorkflow = useMemo(() => {
+    if (!initialWorkflow) {
+      return { nodes: [], edges: [] };
+    }
+    return schemaWorkflowToReactFlow(initialWorkflow);
+  }, [initialWorkflow]);
 
   // Story 03: Track modifier key state for pan/zoom mode
   const [isModifierPressed, setIsModifierPressed] = useState(false);
@@ -193,10 +210,29 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
     redo,
     canUndo,
     canRedo,
-  } = useWorkflowHistory(initialWorkflow.nodes as Node[], initialWorkflow.edges as Edge[]);
+  } = useWorkflowHistory(initialRFWorkflow.nodes as RFNode[], initialRFWorkflow.edges as RFEdge[]);
 
   // Track if we're in the middle of a drag operation
   const isDraggingRef = useRef(false);
+
+  // Helper to format React Flow nodes/edges for onChange callback
+  const toWorkflowFormat = useCallback((rfNodes: RFNode[], rfEdges: RFEdge[]): { nodes: ReactFlowNode[]; edges: ReactFlowEdge[] } => {
+    return {
+      nodes: rfNodes.map(node => ({
+        id: node.id,
+        type: node.type || 'workflow',
+        position: node.position,
+        data: (node.data || {}) as Record<string, unknown>,
+      })),
+      edges: rfEdges.map(edge => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle,
+        targetHandle: edge.targetHandle,
+      })),
+    };
+  }, []);
 
   // Handle node changes from React Flow (positions, selections, etc.)
   const onNodesChange = useCallback((changes: NodeChange[]) => {
@@ -257,13 +293,13 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
     );
     // Use updateWorkflow to record both changes as single history entry
     updateWorkflow(newNodes, newEdges);
-    onChange?.({ nodes: newNodes, edges: newEdges });
+    onChange?.(toWorkflowFormat(newNodes, newEdges));
     onNodeDelete?.(nodeId);
-  }, [nodes, edges, updateWorkflow, onChange, onNodeDelete]);
+  }, [nodes, edges, updateWorkflow, onChange, onNodeDelete, toWorkflowFormat]);
 
   // Enrich nodes with callbacks and connection status
   const enrichedNodes = useMemo(() => {
-    return nodes.map((node: Node) => ({
+    return nodes.map((node: RFNode) => ({
       ...node,
       data: {
         ...node.data,
@@ -286,9 +322,9 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
     (params: Connection) => {
       const newEdges = addEdge(params, edges);
       setEdges(newEdges);
-      onChange?.({ nodes, edges: newEdges });
+      onChange?.(toWorkflowFormat(nodes, newEdges));
     },
-    [edges, nodes, onChange, setEdges]
+    [edges, nodes, onChange, setEdges, toWorkflowFormat]
   );
 
   const onConnectEnd = useCallback(
@@ -317,7 +353,7 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
             onConnectionDropped(pendingConn);
           } else {
             // Fallback: create node directly for standalone usage
-            const newNode: Node = {
+            const newNode: RFNode = {
               id: `node-${Date.now()}`,
               type: 'workflow',
               position,
@@ -337,15 +373,15 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
               };
               const newEdges = [...edges, newEdge];
               setEdges(newEdges);
-              onChange?.({ nodes: newNodes, edges: newEdges });
+              onChange?.(toWorkflowFormat(newNodes, newEdges));
             } else {
-              onChange?.({ nodes: newNodes, edges });
+              onChange?.(toWorkflowFormat(newNodes, edges));
             }
           }
         }
       }
     },
-    [screenToFlowPosition, nodes, edges, setNodes, setEdges, onChange, onConnectionDropped]
+    [screenToFlowPosition, nodes, edges, setNodes, setEdges, onChange, onConnectionDropped, toWorkflowFormat]
   );
 
   // Context menu handlers
@@ -374,7 +410,7 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
     }
   }, [screenToFlowPosition, onAddNodeRequest]);
 
-  const onNodeContextMenu = useCallback((event: any, node: Node) => {
+  const onNodeContextMenu = useCallback((event: any, node: RFNode) => {
     event.preventDefault();
     const menuItems: ContextMenuItem[] = [];
 
@@ -409,7 +445,7 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
             (e) => e.source !== node.id && e.target !== node.id
           );
           updateWorkflow(newNodes, newEdges);
-          onChange?.({ nodes: newNodes, edges: newEdges });
+          onChange?.(toWorkflowFormat(newNodes, newEdges));
           onNodeDelete(node.id);
           setContextMenu(null);
         },
@@ -423,9 +459,9 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
         items: menuItems,
       });
     }
-  }, [nodes, edges, updateWorkflow, onChange, onNodeEdit, onNodeDuplicate, onNodeDelete]);
+  }, [nodes, edges, updateWorkflow, onChange, onNodeEdit, onNodeDuplicate, onNodeDelete, toWorkflowFormat]);
 
-  const onEdgeContextMenu = useCallback((event: any, edge: Edge) => {
+  const onEdgeContextMenu = useCallback((event: any, edge: RFEdge) => {
     event.preventDefault();
     const menuItems: ContextMenuItem[] = [
       {
@@ -434,7 +470,7 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
         onClick: () => {
           const newEdges = edges.filter((e) => e.id !== edge.id);
           setEdges(newEdges);
-          onChange?.({ nodes, edges: newEdges });
+          onChange?.(toWorkflowFormat(nodes, newEdges));
           setContextMenu(null);
         },
       },
@@ -445,7 +481,7 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
       y: event.clientY,
       items: menuItems,
     });
-  }, [nodes, edges, setEdges, onChange]);
+  }, [nodes, edges, setEdges, onChange, toWorkflowFormat]);
 
   // Close context menu when clicking elsewhere
   const onPaneClick = useCallback(() => {
@@ -475,7 +511,7 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
 
       // Create the new node at the pending connection position
       // Note: callbacks will be added by enrichedNodes useMemo
-      const newNode: Node = {
+      const newNode: RFNode = {
         id: nodeId,
         type: nodeType,
         position: pendingConnection.position,
@@ -500,9 +536,9 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
       setPendingConnection(null);
 
       // Notify parent of changes
-      onChange?.({ nodes: newNodes, edges: newEdges });
+      onChange?.(toWorkflowFormat(newNodes, newEdges));
     },
-    [pendingConnection, nodes, edges, updateWorkflow, onChange]
+    [pendingConnection, nodes, edges, updateWorkflow, onChange, toWorkflowFormat]
   );
 
   // Method to cancel a pending connection without creating a node
@@ -515,29 +551,24 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
     return pendingConnection;
   }, [pendingConnection]);
 
-  // Method to get current workflow state with positions
-  const getWorkflow = useCallback((): Workflow => {
-    // Return nodes without the enriched callback data, just the core data
-    const cleanNodes = nodes.map(node => ({
-      id: node.id,
-      type: node.type,
-      position: node.position,
-      data: {
-        label: node.data?.label,
-        nodeType: node.data?.nodeType,
-        package: node.data?.package,
-        app: node.data?.app,
-        action: node.data?.action,
-        config: node.data?.config,
-        disabled: node.data?.disabled,
-        notes: node.data?.notes,
-        input: node.data?.input,
-        output: node.data?.output,
-        packageId: node.data?.packageId,
-        actionId: node.data?.actionId,
-      },
-    }));
-    return { nodes: cleanNodes as Node[], edges };
+  // Method to get current workflow state
+  // Returns React Flow format to match database storage format
+  const getWorkflow = useCallback(() => {
+    return {
+      nodes: nodes.map(node => ({
+        id: node.id,
+        type: node.type || 'workflow',
+        position: node.position,
+        data: node.data || {},
+      })),
+      edges: edges.map(edge => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle,
+        targetHandle: edge.targetHandle,
+      })),
+    };
   }, [nodes, edges]);
 
   // Method to auto-arrange nodes in a horizontal layout
@@ -628,13 +659,13 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
     });
 
     setNodes(newNodes);
-    onChange?.({ nodes: newNodes, edges });
-  }, [nodes, edges, setNodes, onChange]);
+    onChange?.(toWorkflowFormat(newNodes, edges));
+  }, [nodes, edges, setNodes, onChange, toWorkflowFormat]);
 
   // Method to add a new node at a specific position
   const addNode = useCallback(
     (nodeId: string, nodeType: string, position: { x: number; y: number }, nodeData: Record<string, unknown>) => {
-      const newNode: Node = {
+      const newNode: RFNode = {
         id: nodeId,
         type: nodeType,
         position,
@@ -643,9 +674,9 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
 
       const newNodes = [...nodes, newNode];
       setNodes(newNodes);
-      onChange?.({ nodes: newNodes, edges });
+      onChange?.(toWorkflowFormat(newNodes, edges));
     },
-    [nodes, edges, setNodes, onChange]
+    [nodes, edges, setNodes, onChange, toWorkflowFormat]
   );
 
   // Method to add a new node with an edge connection
@@ -659,7 +690,7 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
     ) => {
       console.log('[Editor] addNodeWithEdge called:', { nodeId, nodeType, position, nodeData, connection });
 
-      const newNode: Node = {
+      const newNode: RFNode = {
         id: nodeId,
         type: nodeType,
         position,
@@ -668,7 +699,7 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
 
       // Create the edge based on connection type
       const isSourceConnection = 'sourceNodeId' in connection;
-      const newEdge: Edge = {
+      const newEdge: RFEdge = {
         id: `edge-${Date.now()}`,
         source: isSourceConnection ? (connection as { sourceNodeId: string }).sourceNodeId : nodeId,
         target: isSourceConnection ? nodeId : (connection as { targetNodeId: string }).targetNodeId,
@@ -684,9 +715,9 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
 
       // Use updateWorkflow to record both changes as single history entry
       updateWorkflow(newNodes, newEdges);
-      onChange?.({ nodes: newNodes, edges: newEdges });
+      onChange?.(toWorkflowFormat(newNodes, newEdges));
     },
-    [nodes, edges, updateWorkflow, onChange]
+    [nodes, edges, updateWorkflow, onChange, toWorkflowFormat]
   );
 
   // Story 03: Track modifier key state (Cmd/Ctrl)
