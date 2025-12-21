@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { WorkflowEditor } from '../WorkflowEditor';
-import { transformWorkflow, type W6WSchemaWorkflow } from '../../utils/transformWorkflow';
+import type { Workflow } from '../../types';
 
 // Import workflow mocks from shared __mocks__ directory
 // Type assertion needed because JSON imports have number[] instead of tuple types
@@ -10,12 +10,12 @@ import parallelNotificationsJson from '../../../../../__mocks__/parallel_notific
 import orderWithErrorHandlingJson from '../../../../../__mocks__/order_with_error_handling.json';
 import dataEtlPipelineJson from '../../../../../__mocks__/data_etl_pipeline.json';
 
-// Cast JSON imports to W6WSchemaWorkflow type
-const simpleHttpWebhook = simpleHttpWebhookJson as unknown as W6WSchemaWorkflow;
-const conditionalUserRouting = conditionalUserRoutingJson as unknown as W6WSchemaWorkflow;
-const parallelNotifications = parallelNotificationsJson as unknown as W6WSchemaWorkflow;
-const orderWithErrorHandling = orderWithErrorHandlingJson as unknown as W6WSchemaWorkflow;
-const dataEtlPipeline = dataEtlPipelineJson as unknown as W6WSchemaWorkflow;
+// Cast JSON imports to Workflow type (schema format)
+const simpleHttpWebhook = simpleHttpWebhookJson as unknown as Workflow;
+const conditionalUserRouting = conditionalUserRoutingJson as unknown as Workflow;
+const parallelNotifications = parallelNotificationsJson as unknown as Workflow;
+const orderWithErrorHandling = orderWithErrorHandlingJson as unknown as Workflow;
+const dataEtlPipeline = dataEtlPipelineJson as unknown as Workflow;
 
 const meta = {
   title: 'Workflows/Mock Workflows',
@@ -41,7 +41,8 @@ type Story = StoryObj<typeof meta>;
  */
 export const SimpleHttpWebhook: Story = {
   args: {
-    initialWorkflow: transformWorkflow(simpleHttpWebhook),
+    // Pass schema workflow directly - editor handles conversion internally
+    initialWorkflow: simpleHttpWebhook,
     height: '600px',
   },
   parameters: {
@@ -62,7 +63,7 @@ export const SimpleHttpWebhook: Story = {
  */
 export const ConditionalUserRouting: Story = {
   args: {
-    initialWorkflow: transformWorkflow(conditionalUserRouting),
+    initialWorkflow: conditionalUserRouting,
     height: '700px',
   },
   parameters: {
@@ -83,7 +84,7 @@ export const ConditionalUserRouting: Story = {
  */
 export const ParallelNotifications: Story = {
   args: {
-    initialWorkflow: transformWorkflow(parallelNotifications),
+    initialWorkflow: parallelNotifications,
     height: '700px',
   },
   parameters: {
@@ -104,7 +105,7 @@ export const ParallelNotifications: Story = {
  */
 export const OrderWithErrorHandling: Story = {
   args: {
-    initialWorkflow: transformWorkflow(orderWithErrorHandling),
+    initialWorkflow: orderWithErrorHandling,
     height: '800px',
   },
   parameters: {
@@ -125,7 +126,7 @@ export const OrderWithErrorHandling: Story = {
  */
 export const DataEtlPipeline: Story = {
   args: {
-    initialWorkflow: transformWorkflow(dataEtlPipeline),
+    initialWorkflow: dataEtlPipeline,
     height: '800px',
   },
   parameters: {

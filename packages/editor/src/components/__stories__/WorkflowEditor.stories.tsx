@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { WorkflowEditor } from '../WorkflowEditor';
+import type { Workflow } from '../../types';
 
 const meta = {
   title: 'Components/WorkflowEditor',
@@ -16,39 +17,46 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+// Helper to create a minimal valid workflow
+const createWorkflow = (nodes: Workflow['nodes'], edges: Workflow['edges']): Workflow => ({
+  id: 'story-workflow',
+  name: 'Story Workflow',
+  version: '1.0.0',
+  status: 'draft',
+  nodes,
+  edges,
+});
+
 export const Empty: Story = {
   args: {
-    initialWorkflow: {
-      nodes: [],
-      edges: [],
-    },
+    initialWorkflow: createWorkflow([], []),
   },
 };
 
 export const WithNodes: Story = {
   args: {
-    initialWorkflow: {
-      nodes: [
+    initialWorkflow: createWorkflow(
+      [
         {
           id: '1',
-          type: 'default',
-          position: { x: 100, y: 100 },
-          data: { label: 'Start Node' },
+          type: 'trigger',
+          position: [100, 100],
+          label: 'Start Node',
         },
         {
           id: '2',
-          type: 'default',
-          position: { x: 300, y: 200 },
-          data: { label: 'Process Node' },
+          type: 'action',
+          position: [300, 200],
+          label: 'Process Node',
         },
         {
           id: '3',
-          type: 'default',
-          position: { x: 500, y: 100 },
-          data: { label: 'End Node' },
+          type: 'action',
+          position: [500, 100],
+          label: 'End Node',
         },
       ],
-      edges: [
+      [
         {
           id: 'e1-2',
           source: '1',
@@ -59,53 +67,53 @@ export const WithNodes: Story = {
           source: '2',
           target: '3',
         },
-      ],
-    },
+      ]
+    ),
   },
 };
 
 export const ComplexWorkflow: Story = {
   args: {
-    initialWorkflow: {
-      nodes: [
+    initialWorkflow: createWorkflow(
+      [
         {
           id: '1',
-          type: 'default',
-          position: { x: 100, y: 100 },
-          data: { label: 'Start' },
+          type: 'trigger',
+          position: [100, 100],
+          label: 'Start',
         },
         {
           id: '2',
-          type: 'default',
-          position: { x: 250, y: 50 },
-          data: { label: 'Task A' },
+          type: 'action',
+          position: [250, 50],
+          label: 'Task A',
         },
         {
           id: '3',
-          type: 'default',
-          position: { x: 250, y: 150 },
-          data: { label: 'Task B' },
+          type: 'action',
+          position: [250, 150],
+          label: 'Task B',
         },
         {
           id: '4',
-          type: 'default',
-          position: { x: 400, y: 100 },
-          data: { label: 'Join' },
+          type: 'transform',
+          position: [400, 100],
+          label: 'Join',
         },
         {
           id: '5',
-          type: 'default',
-          position: { x: 550, y: 100 },
-          data: { label: 'Complete' },
+          type: 'action',
+          position: [550, 100],
+          label: 'Complete',
         },
       ],
-      edges: [
+      [
         { id: 'e1-2', source: '1', target: '2' },
         { id: 'e1-3', source: '1', target: '3' },
         { id: 'e2-4', source: '2', target: '4' },
         { id: 'e3-4', source: '3', target: '4' },
         { id: 'e4-5', source: '4', target: '5' },
-      ],
-    },
+      ]
+    ),
   },
 };
