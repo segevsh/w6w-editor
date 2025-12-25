@@ -447,3 +447,130 @@
 .editor-toolbar.dark .editor-toolbar-separator {
   background-color: #4b5563;
 }
+
+/* ==================== Execution Mode Styles ==================== */
+
+/* Running node animation - pulsing border */
+@keyframes executionPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(33, 150, 243, 0);
+  }
+}
+
+.workflow-node.execution-running {
+  animation: executionPulse 1.5s ease-in-out infinite;
+}
+
+/* Execution mode - disable hover effects */
+.workflow-node.execution-mode {
+  cursor: pointer;
+}
+
+.workflow-node.execution-mode:hover {
+  transform: none;
+}
+
+/* Hide add node buttons in execution mode */
+.workflow-node.execution-mode .add-node-button {
+  display: none !important;
+}
+
+/* Status-specific node styling */
+.workflow-node.execution-status-completed {
+  border-color: #4caf50 !important;
+}
+
+.workflow-node.execution-status-failed {
+  border-color: #f44336 !important;
+}
+
+.workflow-node.execution-status-skipped {
+  opacity: 0.6;
+}
+
+.workflow-node.execution-status-cancelled {
+  border-color: #ff9800 !important;
+  opacity: 0.8;
+}
+
+/* Node Execution Badge Styles */
+.node-execution-badge {
+  animation: badgeFadeIn 0.3s ease;
+}
+
+@keyframes badgeFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Spinner animation for running status */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.execution-badge-spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Execution mode indicator badge */
+.execution-mode-indicator {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(33, 150, 243, 0.9);
+  color: white;
+  padding: 6px 16px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.execution-mode-indicator.completed {
+  background: rgba(76, 175, 80, 0.9);
+}
+
+.execution-mode-indicator.failed {
+  background: rgba(244, 67, 54, 0.9);
+}
+
+/* Dark mode execution styles */
+.react-flow.dark .workflow-node.execution-running {
+  animation: executionPulseDark 1.5s ease-in-out infinite;
+}
+
+@keyframes executionPulseDark {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(96, 165, 250, 0);
+  }
+}
+
+.react-flow.dark .node-execution-badge {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.react-flow.dark .execution-mode-indicator {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}

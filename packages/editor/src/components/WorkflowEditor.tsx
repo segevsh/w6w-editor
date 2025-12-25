@@ -17,6 +17,7 @@ import {
   type NodeTypes,
   type Node as RFNode,
   type Edge as RFEdge,
+  type DefaultEdgeOptions,
   SelectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -150,6 +151,11 @@ export interface WorkflowEditorProps extends ContextMenuCallbacks {
 // Define custom node types outside component to prevent re-renders
 const nodeTypes: NodeTypes = {
   workflow: WorkflowNode,
+};
+
+// Default edge options for cleaner workflow appearance
+const defaultEdgeOptions: DefaultEdgeOptions = {
+  type: 'smoothstep',
 };
 
 /**
@@ -824,6 +830,7 @@ const WorkflowEditorInner = forwardRef<WorkflowEditorHandle, WorkflowEditorProps
         nodes={enrichedNodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        defaultEdgeOptions={defaultEdgeOptions}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}

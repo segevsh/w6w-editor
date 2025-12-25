@@ -148,14 +148,36 @@ export function schemaNodeToReactFlow(schemaNode: SchemaNode): ReactFlowNode {
 }
 
 /**
- * Transform a schema edge to React Flow edge format
+ * Check if an edge is already in React Flow format (has sourceHandle/targetHandle fields)
  */
-export function schemaEdgeToReactFlow(schemaEdge: SchemaEdge): ReactFlowEdge {
-  const source = parseEdgeEndpoint(schemaEdge.source);
-  const target = parseEdgeEndpoint(schemaEdge.target);
+function isReactFlowEdge(edge: unknown): edge is ReactFlowEdge {
+  if (typeof edge !== 'object' || edge === null) return false;
+  const e = edge as Record<string, unknown>;
+  return (
+    typeof e.id === 'string' &&
+    typeof e.source === 'string' &&
+    typeof e.target === 'string' &&
+    ('sourceHandle' in e || 'targetHandle' in e)
+  );
+}
+
+/**
+ * Transform a schema edge to React Flow edge format
+ * Also handles React Flow format input (passes through unchanged)
+ */
+export function schemaEdgeToReactFlow(schemaEdge: SchemaEdge | ReactFlowEdge): ReactFlowEdge {
+  // Check if this is already in React Flow format (from database that stores RF format)
+  if (isReactFlowEdge(schemaEdge)) {
+    return schemaEdge;
+  }
+
+  // Handle schema format: parse "nodeId:handle" into separate fields
+  const edge = schemaEdge as SchemaEdge;
+  const source = parseEdgeEndpoint(edge.source);
+  const target = parseEdgeEndpoint(edge.target);
 
   return {
-    id: schemaEdge.id,
+    id: edge.id,
     source: source.nodeId,
     target: target.nodeId,
     sourceHandle: source.handle,

@@ -26,6 +26,7 @@ export type {
   WorkflowNodeType,
   SchemaNodeFields,
   EditorNodeFields,
+  NodeExecutionStatus,
 } from './node';
 export { NODE_TYPES, isValidNodeType, getNodeType } from './node';
 // Re-export NodeType from schema.ts as the canonical one

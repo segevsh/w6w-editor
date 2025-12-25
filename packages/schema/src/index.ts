@@ -43,6 +43,46 @@ export type {
   LogLevel
 } from "./execution-log";
 
+// Execution schemas (comprehensive execution state tracking)
+export {
+  // Status enums
+  executionStatusSchema,
+  nodeExecutionStatusSchema,
+  triggerTypeSchema,
+  transitionScopeSchema,
+  // Error schemas
+  executionErrorSchema,
+  nodeErrorSchema,
+  // Execution record schemas
+  workflowSnapshotSchema,
+  triggerContextSchema,
+  executionRecordSchema,
+  // Node execution schemas
+  loopContextSchema,
+  nodeExecutionStateSchema,
+  // State transition schemas
+  stateTransitionSchema,
+} from "./execution";
+export type {
+  // Status types
+  ExecutionStatus,
+  NodeExecutionStatus,
+  TriggerType,
+  TransitionScope,
+  // Error types
+  ExecutionError,
+  NodeError,
+  // Execution record types
+  WorkflowSnapshot,
+  TriggerContext,
+  ExecutionRecord,
+  // Node execution types
+  LoopContext,
+  NodeExecutionState,
+  // State transition types
+  StateTransition,
+} from "./execution";
+
 // Action and App schemas
 export {
   actionDefinitionSchema,

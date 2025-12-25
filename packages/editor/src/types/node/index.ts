@@ -5,7 +5,7 @@
  */
 
 // Base types (standalone, schema-compatible)
-export type { SchemaNodeFields, EditorNodeFields, NodeType } from './base';
+export type { SchemaNodeFields, EditorNodeFields, NodeType, NodeExecutionStatus } from './base';
 export { NODE_TYPES } from './base';
 
 // Coupled types (combined for editor use)

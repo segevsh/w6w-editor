@@ -2,7 +2,8 @@ import { type FC, memo, useMemo } from 'react';
 import { Handle, Position, type NodeProps as XYNodeProps } from '@xyflow/react';
 import { AppLabel } from '../ui/AppLabel';
 import { NodeActionToolbar } from '../ui/NodeActionToolbar';
-import type { WorkflowNodeData, WorkflowNodeType } from '../../types/node';
+import { NodeExecutionBadge } from '../ui/NodeExecutionBadge';
+import type { WorkflowNodeData, WorkflowNodeType, NodeExecutionStatus } from '../../types/node';
 import { getNodeType } from '../../types/node';
 
 // Re-export types for public API consumers
@@ -16,15 +17,61 @@ const handleStyle = {
 };
 
 /**
+ * Get border color based on execution status
+ */
+function getExecutionBorderColor(status?: NodeExecutionStatus): string | undefined {
+  switch (status) {
+    case 'running':
+      return '#2196f3'; // blue
+    case 'completed':
+      return '#4caf50'; // green
+    case 'failed':
+      return '#f44336'; // red
+    case 'skipped':
+      return '#9e9e9e'; // gray
+    case 'cancelled':
+      return '#ff9800'; // orange
+    case 'queued':
+      return '#9c27b0'; // purple
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Format duration in human-readable format
+ */
+function formatDuration(ms?: number): string | undefined {
+  if (ms === undefined) return undefined;
+  if (ms < 1000) return `${ms}ms`;
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+  return `${(ms / 60000).toFixed(1)}m`;
+}
+
+/**
  * WorkflowNode - A custom React Flow node that renders dynamic input/output handles
  * based on the node's data.input and data.output arrays
+ *
+ * Supports execution mode with visual status indicators:
+ * - Running: Blue pulsing border
+ * - Completed: Green border with checkmark badge
+ * - Failed: Red border with error badge
+ * - Skipped: Gray border
  */
 export const WorkflowNode: FC<XYNodeProps<WorkflowNodeType>> = memo(({ id, data, selected }) => {
   const inputs = data.input || [];
   const outputs = data.output || [];
+  const isExecutionMode = data.isExecutionMode || false;
+  const executionStatus = data.executionStatus;
+  const nodeType = getNodeType(data);
+  const isTrigger = nodeType === 'trigger';
 
   // Calculate handle positions for inputs (left side)
+  // Triggers don't have input handles (they are the start of a workflow)
   const inputHandles = useMemo(() => {
+    if (isTrigger) {
+      return []; // No input handles for triggers
+    }
     if (inputs.length === 0) {
       // Default single input handle
       return [{ id: undefined, top: '50%' }];
@@ -33,7 +80,7 @@ export const WorkflowNode: FC<XYNodeProps<WorkflowNodeType>> = memo(({ id, data,
       id,
       top: `${((index + 1) / (inputs.length + 1)) * 100}%`,
     }));
-  }, [inputs]);
+  }, [inputs, isTrigger]);
 
   // Calculate handle positions for outputs (right side)
   const outputHandles = useMemo(() => {
@@ -49,7 +96,6 @@ export const WorkflowNode: FC<XYNodeProps<WorkflowNodeType>> = memo(({ id, data,
 
   // Get background color based on node type
   const getNodeColor = () => {
-    const nodeType = getNodeType(data);
     switch (nodeType) {
       case 'trigger':
         return '#e3f2fd';
@@ -66,15 +112,35 @@ export const WorkflowNode: FC<XYNodeProps<WorkflowNodeType>> = memo(({ id, data,
     }
   };
 
+  // Determine border style based on execution status
+  const executionBorderColor = getExecutionBorderColor(executionStatus);
+  const isRunning = executionStatus === 'running';
+
+  // Build CSS class names
+  const nodeClassNames = [
+    'workflow-node',
+    isExecutionMode ? 'execution-mode' : '',
+    executionStatus ? `execution-status-${executionStatus}` : '',
+    isRunning ? 'execution-running' : '',
+  ].filter(Boolean).join(' ');
+
+  // Handle click during execution mode
+  const handleNodeClick = () => {
+    if (isExecutionMode && data.onViewExecutionDetails) {
+      data.onViewExecutionDetails(id);
+    }
+  };
+
   return (
     <div
-      className="workflow-node"
+      className={nodeClassNames}
+      onClick={handleNodeClick}
       style={{
         position: 'relative',
         padding: '10px 20px',
         borderRadius: '8px',
         background: getNodeColor(),
-        border: 'none',
+        border: executionBorderColor ? `2px solid ${executionBorderColor}` : 'none',
         minWidth: '120px',
         minHeight: `${Math.max(40, Math.max(inputs.length, outputs.length) * 25)}px`,
         display: 'flex',
@@ -84,10 +150,21 @@ export const WorkflowNode: FC<XYNodeProps<WorkflowNodeType>> = memo(({ id, data,
           ? '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1)'
           : '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)',
         opacity: data.disabled ? 0.5 : 1,
+        cursor: isExecutionMode ? 'pointer' : undefined,
+        transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
       }}
     >
-      {/* Action toolbar (shown when selected) */}
-      {selected && (data.onDelete || data.onEdit || data.onDuplicate) && (
+      {/* Execution status badge (shown in execution mode) */}
+      {isExecutionMode && executionStatus && (
+        <NodeExecutionBadge
+          status={executionStatus}
+          duration={formatDuration(data.executionDuration)}
+          error={data.executionError}
+        />
+      )}
+
+      {/* Action toolbar (shown when selected AND not in execution mode) */}
+      {selected && !isExecutionMode && (data.onDelete || data.onEdit || data.onDuplicate) && (
         <NodeActionToolbar
           nodeId={id}
           onDelete={data.onDelete}
@@ -95,6 +172,7 @@ export const WorkflowNode: FC<XYNodeProps<WorkflowNodeType>> = memo(({ id, data,
           onDuplicate={data.onDuplicate}
         />
       )}
+
       {/* Input handles (left side) */}
       {inputHandles.map((handle) => (
         <Handle
@@ -154,8 +232,8 @@ export const WorkflowNode: FC<XYNodeProps<WorkflowNodeType>> = memo(({ id, data,
         />
       ))}
 
-      {/* Add node buttons for unconnected handles */}
-      {data.onAddNode && !data.hasInputConnection && (
+      {/* Add node buttons (hidden in execution mode, left button hidden for triggers) */}
+      {!isExecutionMode && !isTrigger && data.onAddNode && !data.hasInputConnection && (
         <button
           className="add-node-button add-node-button-left"
           onClick={(e) => {
@@ -173,7 +251,7 @@ export const WorkflowNode: FC<XYNodeProps<WorkflowNodeType>> = memo(({ id, data,
           </svg>
         </button>
       )}
-      {data.onAddNode && !data.hasOutputConnection && (
+      {!isExecutionMode && data.onAddNode && !data.hasOutputConnection && (
         <button
           className="add-node-button add-node-button-right"
           onClick={(e) => {

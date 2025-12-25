@@ -97,6 +97,18 @@ export interface SchemaNodeFields {
 }
 
 /**
+ * Node execution status for visual indicators
+ */
+export type NodeExecutionStatus =
+  | 'pending'
+  | 'queued'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'skipped'
+  | 'cancelled';
+
+/**
  * UI-specific fields that are only used in the editor
  * These do NOT exist in the schema and are for rendering/interaction only
  */
@@ -149,4 +161,34 @@ export interface EditorNodeFields {
    * Whether this node has an outgoing connection (UI state)
    */
   hasOutputConnection?: boolean;
+
+  // ==================== Execution Mode Fields ====================
+
+  /**
+   * Current execution status of this node (UI-only)
+   * Used during workflow execution to show visual status indicators
+   */
+  executionStatus?: NodeExecutionStatus;
+
+  /**
+   * Execution duration in milliseconds (UI-only)
+   * Shown after node completes execution
+   */
+  executionDuration?: number;
+
+  /**
+   * Error message if execution failed (UI-only)
+   */
+  executionError?: string;
+
+  /**
+   * Whether the editor is in execution mode (UI-only)
+   * When true, node interactions are disabled
+   */
+  isExecutionMode?: boolean;
+
+  /**
+   * Callback when user clicks on node during execution to view details
+   */
+  onViewExecutionDetails?: (nodeId: string) => void;
 }

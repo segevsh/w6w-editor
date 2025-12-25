@@ -27,5 +27,16 @@ export type {
   SchemaNodeFields,
   EditorNodeFields,
   NodeType,
+  NodeExecutionStatus,
 } from './types';
 export { NODE_TYPES, isValidNodeType, getNodeType } from './types';
+
+// Export execution hooks
+export { useExecutionState } from './hooks/useExecutionState';
+export type {
+  ExecutionState,
+  ExecutionStatus,
+  NodeExecutionState,
+  ExecutionEventData,
+  UseExecutionStateOptions,
+} from './hooks/useExecutionState';
